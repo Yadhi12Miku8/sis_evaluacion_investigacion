@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Administrador del Sistema</title>
+    <link rel="stylesheet" href="../../public/assets/css/main.css">
+    <link rel="stylesheet" href="../../public/assets/css/admin-dashboard.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="../../public/assets/img/logo.png" alt="Logo">
+                <h2>IESTP SIS</h2>
+            </div>
+            <nav class="menu">
+                <ul>
+                    <li><a href="#usuarios" class="menu-item active" data-section="usuarios">Gestión de Usuarios</a></li>
+                    <li><a href="#solicitudes" class="menu-item" data-section="solicitudes">Solicitudes de Registro</a></li>
+                    <li><a href="#catalogos" class="menu-item" data-section="catalogos">Catálogos</a></li>
+                    <li><a href="#configuracion" class="menu-item" data-section="configuracion">Configuración del Sistema</a></li>
+                    <li><a href="#reportes" class="menu-item" data-section="reportes">Reportes de Auditoría</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1>Dashboard Administrador</h1>
+                <div class="user-info">
+                    <span>Administrador: <strong id="userName">Usuario</strong></span>
+                    <button class="btn-logout">Cerrar Sesión</button>
+                </div>
+            </header>
+
+            <!-- Content Sections -->
+            <section id="usuarios" class="content-section active">
+                <div class="section-header">
+                    <h2>Gestión de Usuarios</h2>
+                    <button class="btn btn-primary" id="btnAgregarUsuario">+ Agregar Usuario</button>
+                </div>
+                <div class="table-container">
+                    <table id="usuariosTable" class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usuariosBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="solicitudes" class="content-section">
+                <div class="section-header">
+                    <h2>Solicitudes de Registro Pendientes</h2>
+                    <div class="filter-bar">
+                        <select id="filterEstado">
+                            <option value="">Todos los estados</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="aprobado">Aprobado</option>
+                            <option value="rechazado">Rechazado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="solicitudesTable" class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Rol Solicitado</th>
+                                <th>Fecha Solicitud</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="solicitudesBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="catalogos" class="content-section">
+                <div class="section-header">
+                    <h2>Gestión de Catálogos</h2>
+                </div>
+                <div class="catalog-grid">
+                    <div class="catalog-card">
+                        <h3>Programas Académicos</h3>
+                        <button class="btn btn-secondary" data-catalog="programas">Gestionar</button>
+                    </div>
+                    <div class="catalog-card">
+                        <h3>Líneas de Investigación</h3>
+                        <button class="btn btn-secondary" data-catalog="lineas">Gestionar</button>
+                    </div>
+                    <div class="catalog-card">
+                        <h3>Departamentos</h3>
+                        <button class="btn btn-secondary" data-catalog="departamentos">Gestionar</button>
+                    </div>
+                    <div class="catalog-card">
+                        <h3>Tipos de Proyecto</h3>
+                        <button class="btn btn-secondary" data-catalog="tipos">Gestionar</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="configuracion" class="content-section">
+                <div class="section-header">
+                    <h2>Configuración del Sistema</h2>
+                </div>
+                <form id="configForm" class="form-config">
+                    <div class="form-group">
+                        <label for="nombreInstitucion">Nombre de la Institución:</label>
+                        <input type="text" id="nombreInstitucion" class="form-control" placeholder="IESTP">
+                    </div>
+                    <div class="form-group">
+                        <label for="emailSistema">Email del Sistema:</label>
+                        <input type="email" id="emailSistema" class="form-control" placeholder="sistema@iestp.edu.pe">
+                    </div>
+                    <div class="form-group">
+                        <label for="periodoAcademico">Período Académico Actual:</label>
+                        <input type="text" id="periodoAcademico" class="form-control" placeholder="2024-I">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="mantenimiento"> Modo Mantenimiento
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </form>
+            </section>
+
+            <section id="reportes" class="content-section">
+                <div class="section-header">
+                    <h2>Reportes de Auditoría</h2>
+                    <div class="filter-bar">
+                        <input type="date" id="fechaInicio" class="form-control">
+                        <input type="date" id="fechaFin" class="form-control">
+                        <button class="btn btn-primary" id="btnGenerarReporte">Generar Reporte</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="auditTable" class="table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Usuario</th>
+                                <th>Acción</th>
+                                <th>Descripción</th>
+                                <th>Resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal para crear/editar usuario -->
+    <div id="usuarioModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Gestionar Usuario</h2>
+            <form id="usuarioForm">
+                <div class="form-group">
+                    <label for="usuarioNombre">Nombre Completo:</label>
+                    <input type="text" id="usuarioNombre" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="usuarioEmail">Email:</label>
+                    <input type="email" id="usuarioEmail" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="usuarioRol">Rol:</label>
+                    <select id="usuarioRol" class="form-control" required>
+                        <option value="">Seleccionar rol</option>
+                        <option value="director">Director</option>
+                        <option value="docente">Docente</option>
+                        <option value="estudiante">Estudiante</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="usuarioActivo" checked> Activo
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="../../public/assets/js/admin-permissions.js"></script>
+    <script src="../../public/assets/js/admin-controller.js"></script>
+    <script src="../../public/assets/js/admin-dashboard.js"></script>
+</body>
+</html>
