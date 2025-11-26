@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard - Comité Editor</title>
+  <link rel="stylesheet" href="/public/css/dashboard.css" />
+</head>
+<body>
+  <div class="dashboard-container">
+    <header>
+      <img src="/img/logo_iestp.png" alt="Logo" class="logo" />
+      <h1>Bienvenido, Comité Editor</h1>
+      <a href="/logout" class="logout-btn">Cerrar sesión</a>
+    </header>
+
+    <main class="grid">
+      <div class="card">
+        <h3>Artículos por Revisar</h3>
+        <a href="/articulos/pendientes" class="btn">Ver pendientes</a>
+      </div>
+
+      <div class="card">
+        <h3>Historial de Revisiones</h3>
+        <a href="/articulos/historial" class="btn">Ver historial</a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
