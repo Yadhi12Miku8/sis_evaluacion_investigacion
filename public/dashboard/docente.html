@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard - Docente Investigador</title>
+  <link rel="stylesheet" href="/public/css/dashboard.css" />
+</head>
+<body>
+  <div class="dashboard-container">
+    <header>
+      <img src="/img/logo_iestp.png" alt="Logo" class="logo" />
+      <h1>Bienvenido, Docente Investigador</h1>
+      <a href="/logout" class="logout-btn">Cerrar sesión</a>
+    </header>
+
+    <main class="grid">
+      <div class="card">
+        <h3>Mis Proyectos</h3>
+        <p>Ver y gestionar tus proyectos de investigación</p>
+        <a href="/proyectos" class="btn">Ver proyectos</a>
+      </div>
+
+      <div class="card">
+        <h3>Registrar Proyecto</h3>
+        <p>Crear nuevo proyecto de investigación</p>
+        <a href="/proyectos/nuevo" class="btn">Registrar</a>
+      </div>
+
+      <div class="card">
+        <h3>Avances</h3>
+        <p>Subir avances mensuales</p>
+        <a href="/avances" class="btn">Ver avances</a>
+      </div>
+
+      <div class="card">
+        <h3>Artículos</h3>
+        <p>Crear artículo científico</p>
+        <a href="/articulos" class="btn">Ver artículos</a>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
