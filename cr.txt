@@ -1,0 +1,44 @@
+	Correo Institucional	Contraseña
+1	lcardenasp@institutocajas.edu.pe	Lourdes123
+2	lrodrigom@institutocajas.edu.pe	Lucia123
+3	lpuentey@institutocajas.edu.pe	Luis123
+4	jmerlog@institutocajas.edu.pe	Juan123
+5	ecarhuachir@institutocajas.edu.pe	Ceferino123
+6	fruizy@institutocajas.edu.pe	Fabian123
+7	rsandovall@institutocajas.edu.pe	Ronald123
+8	ocastrop@institutocajas.edu.pe	Omar123
+9	lbaldeonb@institutocajas.edu.pe	Luz123
+10	kmateoc@institutocajas.edu.pe	Kevin123
+11	lponcem@institutocajas.edu.pe	LuisJ123
+12	jricaldio@institutocajas.edu.pe	Jisenia123
+13	rmachad@institutocajas.edu.pe	Romario123
+14	vgaveq@institutocajas.edu.pe	Vilma123
+15	hhuamanp@institutocajas.edu.pe	Hercules123  Jefe
+16	avilchezm@institutocajas.edu.pe	Arturo123
+17	lserranop@institutocajas.edu.pe	Lizbeth123
+18	emontess@institutocajas.edu.pe	Edgard123
+19	mmendozal@institutocajas.edu.pe	Miguel123
+20	mperezz@institutocajas.edu.pe	Mesias123  Admin
+21	pvitorr@institutocajas.edu.pe	Pedro123
+22	rvelascoc@institutocajas.edu.pe	Roberto123
+23	jsorianov@institutocajas.edu.pe	Jose123
+24	mvillasanal@institutocajas.edu.pe	Marco123
+25	jochoat@institutocajas.edu.pe	JuanA123
+26	rcanchucajav@institutocajas.edu.pe	Rosalinda123
+27	eparragao@institutocajas.edu.pe	Elvis123
+28	lbranese@institutocajas.edu.pe	Lily123
+29	eacunao@institutocajas.edu.pe	Enrique123
+30	azamudiom@institutocajas.edu.pe	Anthony123
+31	rcastilloq@institutocajas.edu.pe	Rocio123
+32	hegoavilv@institutocajas.edu.pe	Heber123
+33	ccunyasa@institutocajas.edu.pe	ChristianE123
+34	dlimasl@institutocajas.edu.pe	Dafni123
+35	lseguram@institutocajas.edu.pe	LuisA123
+36	acozr@institutocajas.edu.pe	Alberto123
+37	yfloress@institutocajas.edu.pe	Yver123
+38	ebarahonat@institutocajas.edu.pe	Esther123
+39	abravog@institutocajas.edu.pe	Adolfo123
+40	faldanal@institutocajas.edu.pe	Franklin123
+41	cricsep@institutocajas.edu.pe	ChristianR123
+42	cperezc@institutocajas.edu.pe	Carlos123
+43	cquinchor@institutocajas.edu.pe	Celia123

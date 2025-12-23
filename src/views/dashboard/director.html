@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Director General</title>
+  <link rel="stylesheet" href="/css/dashboards/director.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="user-info">
+        <div id="userName">Director General</div>
+        <small id="userRole">Director General</small>
+      </div>
+      <nav class="menu">
+        <a class="menu-item" href="#emitir-rd">Emitir Resoluciones Directorales</a>
+        <a class="menu-item" href="#visualizar-rd">Visualizar RD</a>
+        <a class="menu-item" href="#proyectos">Visualizar proyectos</a>
+        <a class="menu-item" href="#reportes-institucionales">Reportes institucionales</a>
+        <a class="menu-item" href="/api/stats/rol" target="_blank">Estadísticas generales</a>
+        <a class="menu-item" href="#dashboard-ejecutivo">Dashboard ejecutivo</a>
+      </nav>
+    </aside>
+    <div class="content">
+      <header>
+        <div class="header-content">
+          <h1>🏛️ Dashboard Director General</h1>
+        </div>
+      </header>
+      <main>
+        <section class="welcome-card">
+          <h2>Bienvenido</h2>
+          <p>Visión estratégica y toma de decisiones del sistema.</p>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script>
+    (function(){
+      try {
+        const user = JSON.parse(localStorage.getItem('user_data')||'{}');
+        if (user && user.nombres) {
+          document.getElementById('userName').textContent = `${user.nombres} ${user.apellidos||''}`.trim();
+        }
+        if (user && user.rol) {
+          document.getElementById('userRole').textContent = user.rol;
+        }
+      } catch(e){}
+    })();
+  </script>
+</body>
+</html>

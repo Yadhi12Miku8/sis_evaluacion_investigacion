@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Investigación - Inicio de Sesión</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo-container">
+                <!-- Logo Institucional -->
+                <div class="institutional-logo">
+                    <!-- Reemplaza 'logo-institucional.png' con la ruta de tu logo -->
+                    <img src="/public/assets/img/logo.jpg" alt="" id="institutionalLogo">
+                </div>
+                
+                <div class="system-name">
+                    <i class="fas fa-flask"></i>
+                    <h1>Sistema de Investigación</h1>
+                </div>
+            </div>
+            <p class="subtitle">Gestión de Investigación e Innovación</p>
+        </div>
+
+        <div class="login-card">
+            <h2><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</h2>
+            <p class="card-subtitle">Ingresa tus credenciales para acceder al sistema</p>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">
+                        <i class="fas fa-envelope"></i> Correo Institucional
+                    </label>
+                    <div class="input-with-icon">
+                        <i class="fas fa-at"></i>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            placeholder="ejemplo@institutocajas.edu.pe" 
+                            required
+                            autocomplete="email"
+                        >
+                    </div>
+                    <div class="error-message" id="emailError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">
+                        <i class="fas fa-lock"></i> Contraseña
+                    </label>
+                    <div class="password-container">
+                        <div class="input-with-icon">
+                            <i class="fas fa-key"></i>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                placeholder="Ingresa tu contraseña" 
+                                required
+                                autocomplete="current-password"
+                            >
+                        </div>
+                        <button type="button" class="toggle-password" id="togglePassword">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="error-message" id="passwordError"></div>
+                </div>
+
+                <div class="form-group remember-me">
+                    <input type="checkbox" id="rememberMe" name="rememberMe">
+                    <label for="rememberMe">Recordar sesión</label>
+                </div>
+
+                <button type="submit" class="btn-login" id="submitBtn">
+                    <span id="btnText">Iniciar Sesión</span>
+                    <div class="spinner hidden" id="spinner"></div>
+                </button>
+            </form>
+
+            <div class="alert hidden" id="alertMessage"></div>
+            
+            <div class="forgot-password" style="text-align: center; margin-top: 20px;">
+                <a href="#" style="color: var(--secondary-color); text-decoration: none; font-size: 0.9rem;">
+                    <i class="fas fa-question-circle"></i> ¿Olvidaste tu contraseña?
+                </a>
+            </div>
+        </div>
+
+        <footer class="login-footer">
+            <p>© 2024 Sistema de Gestión de Investigación e Innovación</p>
+            <p class="version">Versión 1.0.0</p>
+        </footer>
+    </div>
+
+    <script src="/js/login.js"></script>
+</body>
+</html>

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Administrador - IESTP AACD</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/dashboards/admin.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar Administrador -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="user-profile">
+          <div class="user-avatar admin">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <div class="user-info">
+            <h3 id="userName">Administrador</h3>
+            <p class="user-subtitle">Sistema de Gestión</p>
+            <p class="user-role"><i class="fas fa-user-tag"></i> Administrador del Sistema</p>
+            <p class="user-time"><i class="fas fa-clock"></i> Último acceso: <span id="lastAccessTime">--:--</span> hrs</p>
+          </div>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+
+      <nav class="menu">
+        <div class="menu-section">
+          <a class="menu-item active" href="#inicio">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Visión General</span>
+          </a>
+          <a class="menu-item" href="#gestion-usuarios">
+            <i class="fas fa-users-cog"></i>
+            <span>Gestionar Usuarios</span>
+            <span class="badge" id="totalUsersBadge">0</span>
+          </a>
+          <a class="menu-item" href="#solicitudes-registro">
+            <i class="fas fa-user-plus"></i>
+            <span>Solicitudes de Registro</span>
+            <span class="badge badge-warning" id="pendingRequestsBadge">0</span>
+          </a>
+          <a class="menu-item" href="#gestion-usuarios">
+            <i class="fas fa-user-tag"></i>
+            <span>Asignar/Modificar Roles</span>
+          </a>
+          <a class="menu-item" href="#gestion-usuarios">
+            <i class="fas fa-user-slash"></i>
+            <span>Activar/Desactivar</span>
+            <span class="badge badge-danger" id="inactiveUsersBadge">0</span>
+          </a>
+        </div>
+
+        <div class="menu-section">
+          <h4 class="section-title">CONFIGURACIÓN DEL SISTEMA</h4>
+          <a class="menu-item" href="#catalogos">
+            <i class="fas fa-cogs"></i>
+            <span>Configuración General</span>
+          </a>
+          <a class="menu-item" href="#catalogos">
+            <i class="fas fa-folder-open"></i>
+            <span>Catálogos</span>
+          </a>
+          <a class="menu-item" href="#catalogos">
+            <i class="fas fa-graduation-cap"></i>
+            <span>Programas Académicos</span>
+          </a>
+          <a class="menu-item" href="#catalogos">
+            <i class="fas fa-flask"></i>
+            <span>Líneas de Investigación</span>
+          </a>
+          <a class="menu-item" href="#catalogos">
+            <i class="fas fa-sliders-h"></i>
+            <span>Parámetros del Sistema</span>
+          </a>
+        </div>
+
+        <div class="menu-section">
+          <h4 class="section-title">VISUALIZACIÓN Y REPORTES</h4>
+          <a class="menu-item" href="#visualizacion-datos">
+            <i class="fas fa-chart-bar"></i>
+            <span>Visualizar Información</span>
+          </a>
+          <a class="menu-item" href="#logs-sistema">
+            <i class="fas fa-clipboard-check"></i>
+            <span>Reportes de Auditoría</span>
+          </a>
+          <a class="menu-item" href="#logs-sistema">
+            <i class="fas fa-user-chart"></i>
+            <span>Reportes de Usuarios</span>
+          </a>
+          <a class="menu-item" href="#logs-sistema">
+            <i class="fas fa-server"></i>
+            <span>Reportes del Sistema</span>
+          </a>
+          <a class="menu-item" href="#logs-sistema">
+            <i class="fas fa-history"></i>
+            <span>Logs del Sistema</span>
+            <span class="badge badge-info" id="systemLogsBadge">0</span>
+          </a>
+        </div>
+
+        <div class="menu-section">
+          <h4 class="section-title">ACCESO RESTRINGIDO</h4>
+          <a class="menu-item disabled" href="#evaluaciones" title="No participa en evaluaciones de proyectos">
+            <i class="fas fa-clipboard-check"></i>
+            <span>Evaluaciones de Proyectos</span>
+            <i class="fas fa-lock restriction-icon"></i>
+          </a>
+          <a class="menu-item disabled" href="#resoluciones" title="No emite resoluciones directorales">
+            <i class="fas fa-file-signature"></i>
+            <span>Resoluciones Directoriales</span>
+            <i class="fas fa-lock restriction-icon"></i>
+          </a>
+        </div>
+
+        <div class="menu-section">
+          <h4 class="section-title">AYUDA Y SOPORTE</h4>
+          <a class="menu-item" href="#logs-sistema">
+            <i class="fas fa-database"></i>
+            <span>Backup del Sistema</span>
+          </a>
+          <a class="menu-item" href="#logs-sistema">
+            <i class="fas fa-file-alt"></i>
+            <span>Documentación</span>
+          </a>
+          <a class="menu-item" href="#logs-sistema">
+            <i class="fas fa-headset"></i>
+            <span>Soporte Técnico</span>
+          </a>
+        </div>
+
+        <div class="menu-footer">
+          <button class="btn-logout" id="logoutBtn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Contenido Principal Administrador -->
+    <div class="main-content">
+      <!-- Header Administrador -->
+      <header class="main-header">
+        <div class="header-left">
+          <div class="institution-header">
+            <div class="institution-logo admin">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <div>
+              <h1>Panel de Administración del Sistema</h1>
+              <p class="institution-subtitle">I.E.S.T.P "Andrés Avelino Cáceres Dorregaray"</p>
+              <p class="system-name">Sistema de Gestión de Investigación - Administración</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="header-right">
+          <div class="header-actions">
+            <button class="btn-notifications" id="notificationsBtn">
+              <i class="fas fa-bell"></i>
+              <span class="notification-badge" id="notificationCount">0</span>
+            </button>
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input type="text" placeholder="Buscar usuarios, configuraciones...">
+            </div>
+            <button class="btn-system" id="systemStatusBtn">
+              <i class="fas fa-server"></i>
+              <span>Estado del Sistema</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Contenido Principal -->
+      <main class="content">
+        <!-- Banner de Administrador -->
+        <section class="welcome-banner admin" id="inicio">
+          <div class="welcome-content">
+            <h2>Bienvenido al Panel de Administración</h2>
+            <p>Gestione usuarios, permisos y configuraciones del sistema con acceso total.</p>
+          </div>
+          <div class="welcome-stats">
+            <div class="stat-item critical">
+              <div class="stat-value" id="pendingApprovals">0</div>
+              <div class="stat-label">Solicitudes Pendientes</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="activeUsers">0</div>
+              <div class="stat-label">Usuarios Activos</div>
+            </div>
+            <div class="stat-item warning">
+              <div class="stat-value" id="inactiveUsers">0</div>
+              <div class="stat-label">Usuarios Inactivos</div>
+            </div>
+            <div class="stat-item success">
+              <div class="stat-value" id="systemUptime">100%</div>
+              <div class="stat-label">Disponibilidad</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sección de Solicitudes Pendientes -->
+        <section class="admin-section" id="solicitudes-registro">
+          <div class="section-header">
+            <h2><i class="fas fa-user-plus"></i> Solicitudes de Registro Pendientes</h2>
+            <div class="section-actions">
+              <button class="btn-primary" id="approveAllBtn">
+                <i class="fas fa-check-double"></i>
+                Aprobar Todas
+              </button>
+              <button class="btn-secondary">
+                <i class="fas fa-filter"></i>
+                Filtrar
+              </button>
+            </div>
+          </div>
+
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAll"></th>
+                  <th>Usuario</th>
+                  <th>Correo Electrónico</th>
+                  <th>Rol Solicitado</th>
+                  <th>Fecha Solicitud</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="requestsTableBody">
+                <!-- Las solicitudes se cargarán dinámicamente -->
+                <tr class="loading-row">
+                  <td colspan="7">
+                    <div class="loading-spinner">
+                      <i class="fas fa-spinner fa-spin"></i>
+                      <span>Cargando solicitudes...</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Sección de Gestión de Usuarios -->
+        <section class="admin-section" id="gestion-usuarios">
+          <div class="section-header">
+            <h2><i class="fas fa-users-cog"></i> Gestión de Usuarios</h2>
+            <div class="section-actions">
+              <button class="btn-primary" id="addUserBtn">
+                <i class="fas fa-user-plus"></i>
+                Agregar Usuario
+              </button>
+              <button class="btn-secondary" id="exportUsersBtn">
+                <i class="fas fa-file-export"></i>
+                Exportar
+              </button>
+            </div>
+          </div>
+
+          <div class="filters-bar">
+            <div class="filter-group">
+              <label for="filterRole">Filtrar por Rol:</label>
+              <select id="filterRole" class="filter-select">
+                <option value="all">Todos los roles</option>
+                <option value="admin">Administrador</option>
+                <option value="docente">Docente Investigador</option>
+                <option value="evaluador">Evaluador</option>
+                <option value="director">Director</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="filterStatus">Estado:</label>
+              <select id="filterStatus" class="filter-select">
+                <option value="all">Todos</option>
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+                <option value="pending">Pendientes</option>
+              </select>
+            </div>
+            <button class="btn-filter" id="applyFiltersBtn">
+              <i class="fas fa-check"></i>
+              Aplicar
+            </button>
+          </div>
+
+          <div class="users-grid" id="usersGrid">
+            <!-- Los usuarios se cargarán dinámicamente -->
+            <div class="user-card skeleton">
+              <div class="skeleton-avatar"></div>
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line short"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sección de Catálogos del Sistema -->
+        <section class="admin-section" id="catalogos">
+          <div class="section-header">
+            <h2><i class="fas fa-folder-open"></i> Catálogos del Sistema</h2>
+            <button class="btn-primary" id="manageCatalogsBtn">
+              <i class="fas fa-edit"></i>
+              Gestionar Catálogos
+            </button>
+          </div>
+
+          <div class="catalogs-grid">
+            <div class="catalog-card">
+              <div class="catalog-icon">
+                <i class="fas fa-graduation-cap"></i>
+              </div>
+              <h3>Programas Académicos</h3>
+              <p class="catalog-count" id="programsCount">0 programas</p>
+              <button class="btn-catalog">Ver/Editar</button>
+            </div>
+            
+            <div class="catalog-card">
+              <div class="catalog-icon">
+                <i class="fas fa-flask"></i>
+              </div>
+              <h3>Líneas de Investigación</h3>
+              <p class="catalog-count" id="researchLinesCount">0 líneas</p>
+              <button class="btn-catalog">Ver/Editar</button>
+            </div>
+            
+            <div class="catalog-card">
+              <div class="catalog-icon">
+                <i class="fas fa-building"></i>
+              </div>
+              <h3>Departamentos</h3>
+              <p class="catalog-count" id="departmentsCount">0 departamentos</p>
+              <button class="btn-catalog">Ver/Editar</button>
+            </div>
+            
+            <div class="catalog-card">
+              <div class="catalog-icon">
+                <i class="fas fa-tags"></i>
+              </div>
+              <h3>Tipos de Proyecto</h3>
+              <p class="catalog-count" id="projectTypesCount">0 tipos</p>
+              <button class="btn-catalog">Ver/Editar</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sección de Estado del Sistema -->
+        <section class="admin-section" id="visualizacion-datos">
+          <div class="section-header">
+            <h2><i class="fas fa-chart-line"></i> Estado del Sistema</h2>
+            <select id="timeRange" class="time-select">
+              <option value="today">Hoy</option>
+              <option value="week">Esta semana</option>
+              <option value="month">Este mes</option>
+            </select>
+          </div>
+
+          <div class="system-stats">
+            <div class="stat-card">
+              <div class="stat-header">
+                <i class="fas fa-database"></i>
+                <h3>Uso de Base de Datos</h3>
+              </div>
+              <div class="stat-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 65%"></div>
+                </div>
+                <span class="progress-value">65%</span>
+              </div>
+              <p class="stat-desc">1.2GB / 2GB utilizados</p>
+            </div>
+            
+            <div class="stat-card">
+              <div class="stat-header">
+                <i class="fas fa-memory"></i>
+                <h3>Uso de Memoria</h3>
+              </div>
+              <div class="stat-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 45%"></div>
+                </div>
+                <span class="progress-value">45%</span>
+              </div>
+              <p class="stat-desc">720MB / 1.6GB utilizados</p>
+            </div>
+            
+            <div class="stat-card">
+              <div class="stat-header">
+                <i class="fas fa-bolt"></i>
+                <h3>Tiempo de Respuesta</h3>
+              </div>
+              <div class="stat-value-large">120ms</div>
+              <p class="stat-desc">Promedio de respuesta</p>
+            </div>
+            
+            <div class="stat-card">
+              <div class="stat-header">
+                <i class="fas fa-user-clock"></i>
+                <h3>Sesiones Activas</h3>
+              </div>
+              <div class="stat-value-large" id="activeSessions">0</div>
+              <p class="stat-desc">Usuarios conectados</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sección de Alertas del Sistema -->
+        <section class="admin-section alert-section" id="logs-sistema">
+          <div class="section-header">
+            <h2><i class="fas fa-exclamation-triangle"></i> Alertas del Sistema</h2>
+            <button class="btn-secondary" id="markAllAlertsReadBtn">
+              <i class="fas fa-check-double"></i>
+              Marcar como leídas
+            </button>
+          </div>
+
+          <div class="alerts-container" id="alertsContainer">
+            <div class="alert-item warning">
+              <div class="alert-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <div class="alert-content">
+                <h4>Backup pendiente</h4>
+                <p>El backup semanal del sistema está pendiente de ejecución</p>
+                <span class="alert-time">Hace 2 días</span>
+              </div>
+              <button class="alert-action">Resolver</button>
+            </div>
+            
+            <div class="alert-item info">
+              <div class="alert-icon">
+                <i class="fas fa-info-circle"></i>
+              </div>
+              <div class="alert-content">
+                <h4>Actualización disponible</h4>
+                <p>Nueva versión del sistema disponible (v2.1.3)</p>
+                <span class="alert-time">Hace 5 días</span>
+              </div>
+              <button class="alert-action">Actualizar</button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Footer -->
+      <footer class="main-footer">
+        <div class="footer-content">
+          <div class="footer-left">
+            <p>I.E.S.T.P "Andrés Avelino Cáceres Dorregaray"</p>
+            <p class="footer-sub">© 2024 Sistema de Gestión de Investigación - Panel Administrativo</p>
+          </div>
+          <div class="footer-right">
+            <div class="system-metrics">
+              <span class="metric">
+                <i class="fas fa-server"></i>
+                <span id="systemUptimeFooter">100%</span> uptime
+              </span>
+              <span class="metric">
+                <i class="fas fa-users"></i>
+                <span id="totalUsersFooter">0</span> usuarios
+              </span>
+              <span class="metric">
+                <i class="fas fa-database"></i>
+                <span id="dbUsageFooter">0%</span> BD
+              </span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal para Aprobar Solicitudes -->
+  <div class="modal" id="approveModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-user-check"></i> Aprobar Solicitudes</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>¿Está seguro de que desea aprobar las solicitudes seleccionadas?</p>
+        <div class="selected-users" id="selectedUsersList"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelApproveBtn">Cancelar</button>
+        <button class="btn-primary" id="confirmApproveBtn">Aprobar Seleccionados</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/dashboards/admin.js"></script>
+</body>
+</html>

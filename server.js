@@ -1,0 +1,569 @@
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const path = require('path');
+
+// Importar rutas
+const authRoutes = require('./src/routes/auth.routes');
+const dashboardRoutes = require('./src/routes/dashboard.routes');
+
+// Crear aplicación Express
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middlewares
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'app')));
+app.use('/src/views/js', express.static(path.join(__dirname, 'src/views/js')));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Configuración de conexión a BD
+const mysql = require('mysql2/promise');
+const pool = mysql.createPool({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'sistema_investigacion_innovacion',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// Función para generar JWT
+const jwt = require('jsonwebtoken');
+const SECRET_KEY = process.env.JWT_SECRET || 'tu_clave_secreta_super_segura_2025';
+
+function generarToken(usuario) {
+    return jwt.sign(
+        {
+            id: usuario.id,
+            correo: usuario.correo_institucional,
+            rol: usuario.rol
+        },
+        SECRET_KEY,
+        { expiresIn: '8h' }
+    );
+}
+
+function verificarJWT(header) {
+  try {
+    if (!header || !header.startsWith('Bearer ')) return null;
+    const token = header.split(' ')[1];
+    return jwt.verify(token, SECRET_KEY);
+  } catch (e) {
+    return null;
+  }
+}
+
+function requireAuth(req, res, next) {
+  const decoded = verificarJWT(req.headers.authorization || '');
+  if (!decoded) return res.status(401).json({ success: false, message: 'No autorizado' });
+  req.user = decoded;
+  next();
+}
+
+function rolToRoute(rol) {
+    if (!rol) return '/dashboard';
+    const r = rol.toLowerCase();
+    if (r.includes('docente')) return '/dashboard/docente';
+    if (r.includes('jefe')) return '/dashboard/jefe-unidad';
+    if (r.includes('director')) return '/dashboard/director';
+    if (r.includes('comite') || r.includes('editor')) return '/dashboard/comite-editor';
+    if (r.includes('admin')) return '/dashboard/admin';
+    return '/dashboard';
+}
+
+// El endpoint de login ahora está centralizado en `src/routes/auth.routes.js`
+// (controlador: `src/controllers/Auth.controller.js`).
+
+// Ruta para obtener proyectos del usuario autenticado
+app.get('/api/proyectos/:usuario_id', async (req, res) => {
+    const { usuario_id } = req.params;
+
+    try {
+        const conn = await pool.getConnection();
+        const [proyectos] = await conn.query(
+            `SELECT p.* FROM proyectos p 
+             INNER JOIN integrantes_proyecto ip ON p.id = ip.proyecto_id 
+             WHERE ip.usuario_id = ?`,
+            [usuario_id]
+        );
+        conn.release();
+
+        res.json({ success: true, proyectos });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al obtener proyectos' });
+    }
+});
+
+app.post('/api/proyectos', requireAuth, async (req, res) => {
+  const { titulo = '', tipo = 'Investigacion Aplicada', linea_investigacion_id = null, objetivo_general = null, beneficiarios = null, fecha_inicio = null, fecha_fin = null } = req.body;
+  try {
+    const conn = await pool.getConnection();
+    const [maxIdRows] = await conn.query('SELECT IFNULL(MAX(id),0)+1 as next_id FROM proyectos');
+    const nextId = maxIdRows.next_id || Date.now();
+    const year = new Date().getFullYear();
+    const codigo = `PROY-${year}-${String(nextId).padStart(3,'0')}`;
+    const [result] = await conn.query(
+      'INSERT INTO proyectos (codigo, titulo, tipo, linea_investigacion_id, usuario_id, objetivo_general, beneficiarios, fecha_inicio, fecha_fin, estado) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      [codigo, titulo, tipo, linea_investigacion_id, req.user.id, objetivo_general, beneficiarios, fecha_inicio, fecha_fin, 'En Ejecucion']
+    );
+    const insertedId = result.insertId;
+    await conn.query('INSERT INTO integrantes_proyecto (proyecto_id, usuario_id, rol) VALUES (?,?,?)', [insertedId, req.user.id, 'Investigador Principal']);
+    conn.release();
+    res.json({ success: true, proyecto: { id: insertedId, codigo, titulo, tipo } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al crear proyecto' });
+  }
+});
+
+app.post('/api/documentos_proyecto', requireAuth, async (req, res) => {
+  const { proyecto_id, tipo_documento = 'Perfil', nombre_archivo = null, ruta_archivo = null, estado = 'En revision' } = req.body;
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query(
+      'INSERT INTO documentos_proyecto (proyecto_id, tipo_documento, nombre_archivo, ruta_archivo, subido_por, estado) VALUES (?,?,?,?,?,?)',
+      [proyecto_id, tipo_documento, nombre_archivo, ruta_archivo, req.user.id, estado]
+    );
+    conn.release();
+    res.json({ success: true, documento_id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al registrar documento' });
+  }
+});
+
+app.get('/api/documentos_proyecto/:proyecto_id', async (req, res) => {
+  const { proyecto_id } = req.params;
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query('SELECT * FROM documentos_proyecto WHERE proyecto_id = ? ORDER BY fecha_subida DESC', [proyecto_id]);
+    conn.release();
+    res.json({ success: true, documentos: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener documentos' });
+  }
+});
+
+app.get('/api/documentos_proyecto/by-user/:usuario_id', async (req, res) => {
+  const { usuario_id } = req.params;
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      `SELECT d.* FROM documentos_proyecto d
+       INNER JOIN proyectos p ON d.proyecto_id = p.id
+       INNER JOIN integrantes_proyecto ip ON p.id = ip.proyecto_id
+       WHERE ip.usuario_id = ?
+       ORDER BY d.fecha_subida DESC`,
+      [usuario_id]
+    );
+    conn.release();
+    res.json({ success: true, documentos: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener documentos por usuario' });
+  }
+});
+
+app.get('/api/articulos/:usuario_id', async (req, res) => {
+  const { usuario_id } = req.params;
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query('SELECT a.* FROM articulos_cientificos a INNER JOIN proyectos p ON a.proyecto_id = p.id INNER JOIN integrantes_proyecto ip ON p.id = ip.proyecto_id WHERE ip.usuario_id = ?', [usuario_id]);
+    conn.release();
+    res.json({ success: true, articulos: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener artículos' });
+  }
+});
+
+app.post('/api/articulos', requireAuth, async (req, res) => {
+  const { proyecto_id, titulo = '', autores = null, resumen_es = null, palabras_clave = null } = req.body;
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query('INSERT INTO articulos_cientificos (proyecto_id, titulo, autores, resumen_es, palabras_clave, estado) VALUES (?,?,?,?,?,?)', [proyecto_id, titulo, autores, resumen_es, palabras_clave, 'En revision']);
+    conn.release();
+    res.json({ success: true, articulo_id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al crear artículo' });
+  }
+});
+
+app.get('/api/gastos/:proyecto_id', async (req, res) => {
+  const { proyecto_id } = req.params;
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query('SELECT * FROM gastos WHERE proyecto_id = ?', [proyecto_id]);
+    conn.release();
+    res.json({ success: true, gastos: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener gastos' });
+  }
+});
+
+app.post('/api/gastos', requireAuth, async (req, res) => {
+  const { proyecto_id, concepto = '', monto = 0, fecha = null, comprobante = null } = req.body;
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query('INSERT INTO gastos (proyecto_id, concepto, monto, fecha, comprobante) VALUES (?,?,?,?,?)', [proyecto_id, concepto, monto, fecha, comprobante]);
+    conn.release();
+    res.json({ success: true, gasto_id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al registrar gasto' });
+  }
+});
+
+app.get('/api/presupuestos/:proyecto_id', async (req, res) => {
+  const { proyecto_id } = req.params;
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query('SELECT * FROM presupuestos WHERE proyecto_id = ?', [proyecto_id]);
+    conn.release();
+    res.json({ success: true, presupuestos: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener presupuestos' });
+  }
+});
+
+app.get('/api/notificaciones/:usuario_id', async (req, res) => {
+  const { usuario_id } = req.params;
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query('SELECT * FROM notificaciones WHERE usuario_id = ? ORDER BY fecha_envio DESC', [usuario_id]);
+    conn.release();
+    res.json({ success: true, notificaciones: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener notificaciones por usuario' });
+  }
+});
+
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [uTotal] = await conn.query('SELECT COUNT(*) as total FROM usuarios');
+    const [uActive] = await conn.query("SELECT COUNT(*) as total FROM usuarios WHERE estado = 'Activo'");
+    const [uInactive] = await conn.query("SELECT COUNT(*) as total FROM usuarios WHERE estado = 'Inactivo'");
+    const [prog] = await conn.query('SELECT COUNT(*) as total FROM programas_estudio');
+    const [lines] = await conn.query('SELECT COUNT(*) as total FROM lineas_investigacion');
+    const [deps] = await conn.query('SELECT COUNT(DISTINCT programa_estudio_id) as total FROM usuarios WHERE programa_estudio_id IS NOT NULL');
+    const [projTypes] = await conn.query('SELECT COUNT(DISTINCT tipo) as total FROM proyectos');
+    const [logs] = await conn.query('SELECT COUNT(*) as total FROM notificaciones');
+    const [unread] = await conn.query('SELECT COUNT(*) as total FROM notificaciones WHERE leido = 0');
+    conn.release();
+    res.json({
+      success: true,
+      stats: {
+        totalUsers: (uTotal[0] && uTotal[0].total) || 0,
+        activeUsers: (uActive[0] && uActive[0].total) || 0,
+        inactiveUsers: (uInactive[0] && uInactive[0].total) || 0,
+        pendingApprovals: (uInactive[0] && uInactive[0].total) || 0,
+        programsCount: (prog[0] && prog[0].total) || 0,
+        researchLinesCount: (lines[0] && lines[0].total) || 0,
+        departmentsCount: (deps[0] && deps[0].total) || 0,
+        projectTypesCount: (projTypes[0] && projTypes[0].total) || 0,
+        systemLogs: (logs[0] && logs[0].total) || 0,
+        unreadNotifications: (unread[0] && unread[0].total) || 0,
+        activeSessions: 0
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener estadísticas de administración' });
+  }
+});
+
+app.get('/api/admin/alerts', async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      "SELECT id, titulo, mensaje, tipo, leido, fecha_envio FROM notificaciones ORDER BY fecha_envio DESC LIMIT 10"
+    );
+    conn.release();
+
+    const alerts = rows.map(r => ({
+      id: r.id,
+      title: r.titulo,
+      message: r.mensaje,
+      type: r.tipo,
+      read: !!r.leido,
+      date: r.fecha_envio
+    }));
+
+    res.json({ success: true, alerts });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener alertas' });
+  }
+});
+
+app.post('/api/admin/alerts/mark-all-read', async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query('UPDATE notificaciones SET leido = 1 WHERE leido = 0');
+    conn.release();
+    res.json({ success: true, updated: (result && result.affectedRows) || 0 });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al marcar alertas como leídas' });
+  }
+});
+
+app.get('/api/admin/pending-requests', async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      "SELECT id, nombres, apellidos, correo_institucional, rol, fecha_registro FROM usuarios WHERE estado = 'Inactivo' ORDER BY fecha_registro DESC"
+    );
+    conn.release();
+    const requests = rows.map(r => ({
+      id: r.id,
+      name: `${r.nombres} ${r.apellidos}`,
+      email: r.correo_institucional,
+      role: r.rol,
+      date: (new Date(r.fecha_registro)).toISOString().slice(0, 10),
+      status: 'Pendiente'
+    }));
+    res.json({ success: true, requests });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener solicitudes pendientes' });
+  }
+});
+
+app.post('/api/admin/requests/:id/approve', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) return res.status(400).json({ success: false, message: 'ID inválido' });
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query(
+      "UPDATE usuarios SET estado = 'Activo' WHERE id = ? AND estado = 'Inactivo'",
+      [id]
+    );
+    conn.release();
+
+    if (!result || result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Solicitud no encontrada o ya fue procesada' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al aprobar solicitud' });
+  }
+});
+
+app.post('/api/admin/requests/:id/reject', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) return res.status(400).json({ success: false, message: 'ID inválido' });
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query(
+      "DELETE FROM usuarios WHERE id = ? AND estado = 'Inactivo'",
+      [id]
+    );
+    conn.release();
+
+    if (!result || result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Solicitud no encontrada o ya fue procesada' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al rechazar solicitud' });
+  }
+});
+
+app.post('/api/admin/requests/approve-batch', async (req, res) => {
+  const ids = Array.isArray(req.body && req.body.ids) ? req.body.ids : [];
+  const cleanIds = ids.map(n => Number(n)).filter(n => Number.isInteger(n) && n > 0);
+  if (cleanIds.length === 0) return res.status(400).json({ success: false, message: 'Lista de IDs inválida' });
+
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query(
+      `UPDATE usuarios SET estado = 'Activo' WHERE estado = 'Inactivo' AND id IN (${cleanIds.map(() => '?').join(',')})`,
+      cleanIds
+    );
+    conn.release();
+    res.json({ success: true, updated: (result && result.affectedRows) || 0 });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al aprobar solicitudes' });
+  }
+});
+
+app.get('/api/exposiciones', async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query('SELECT * FROM exposiciones ORDER BY fecha DESC');
+    conn.release();
+    res.json({ success: true, exposiciones: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener exposiciones' });
+  }
+});
+
+app.post('/api/inscripciones_exposicion', requireAuth, async (req, res) => {
+  const { exposicion_id, proyecto_id } = req.body;
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query('INSERT INTO inscripciones_exposicion (exposicion_id, proyecto_id) VALUES (?,?)', [exposicion_id, proyecto_id]);
+    conn.release();
+    res.json({ success: true, inscripcion_id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al inscribirse en exposición' });
+  }
+});
+
+// Ruta para obtener todos los usuarios (solo Admin)
+app.get('/api/usuarios', async (req, res) => {
+    try {
+        const { rol, estado, q } = req.query;
+        const conn = await pool.getConnection();
+
+        const where = [];
+        const params = [];
+
+        if (rol && String(rol).trim() !== '') {
+            where.push('rol = ?');
+            params.push(String(rol).trim());
+        }
+
+        if (estado && String(estado).trim() !== '') {
+            where.push('estado = ?');
+            params.push(String(estado).trim());
+        }
+
+        if (q && String(q).trim() !== '') {
+            where.push('(nombres LIKE ? OR apellidos LIKE ? OR correo_institucional LIKE ?)');
+            const like = `%${String(q).trim()}%`;
+            params.push(like, like, like);
+        }
+
+        const whereSql = where.length > 0 ? ` WHERE ${where.join(' AND ')}` : '';
+        const sql = `SELECT id, nombres, apellidos, correo_institucional, rol, estado FROM usuarios${whereSql} ORDER BY apellidos, nombres`;
+        const [usuarios] = await conn.query(sql, params);
+        conn.release();
+
+        res.json({ success: true, usuarios });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al obtener usuarios' });
+    }
+});
+
+// Ruta para obtener programas de estudio
+app.get('/api/programas', async (req, res) => {
+    try {
+        const conn = await pool.getConnection();
+        const [programas] = await conn.query('SELECT * FROM programas_estudio');
+        conn.release();
+
+        res.json({ success: true, programas });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al obtener programas' });
+    }
+});
+
+// Ruta para obtener líneas de investigación
+app.get('/api/lineas/:programa_id', async (req, res) => {
+    const { programa_id } = req.params;
+
+    try {
+        const conn = await pool.getConnection();
+        const [lineas] = await conn.query(
+            'SELECT * FROM lineas_investigacion WHERE programa_estudio_id = ?',
+            [programa_id]
+        );
+        conn.release();
+
+        res.json({ success: true, lineas });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al obtener líneas' });
+    }
+});
+
+// Rutas de API
+app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+
+// Ruta para servir el inicio de sesión (en español)
+app.get('/inicio-sesion', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/views/inicio_sesion.html'));
+});
+
+// Compatibilidad: redirigir /login a /inicio-sesion
+app.get('/login', (req, res) => {
+    res.redirect('/inicio-sesion');
+});
+
+// Redirigir raíz a /inicio-sesion
+app.get('/', (req, res) => {
+    res.redirect('/inicio-sesion');
+});
+
+// Rutas HTML de dashboard
+app.get('/dashboard/docente', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/views/dashboard/docente-investigador.html'));
+});
+
+app.get('/dashboard/jefe-unidad', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/views/dashboard/jefe-unidad.html'));
+});
+
+app.get('/dashboard/director', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/views/dashboard/director.html'));
+});
+
+app.get('/dashboard/comite-editor', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/views/dashboard/comite-editor.html'));
+});
+
+app.get('/dashboard/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/views/dashboard/admin.html'));
+});
+
+// Manejo de errores 404
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Ruta no encontrada'
+  });
+});
+
+// Manejo de errores global
+app.use((err, req, res, next) => {
+  console.error('Error:', err.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Error interno del servidor'
+  });
+});
+
+// Iniciar servidor con fallback de puerto si está en uso
+function startServer(startPort, retries = 10) {
+  const selectedPort = Number(startPort);
+  const server = app.listen(selectedPort, () => {
+    console.log(`🚀 Servidor corriendo en http://localhost:${selectedPort}`);
+    console.log(`📁 Entorno: ${process.env.NODE_ENV || 'development'}`);
+  });
+
+  server.on('error', (err) => {
+    if (err && err.code === 'EADDRINUSE' && retries > 0) {
+      const nextPort = selectedPort + 1;
+      console.warn(`⚠️ Puerto ${selectedPort} en uso. Intentando ${nextPort}...`);
+      startServer(nextPort, retries - 1);
+    } else {
+      console.error('❌ Error al iniciar servidor:', err);
+      process.exit(1);
+    }
+  });
+}
+
+startServer(PORT);
+
+/*escribe este primer commit para este proyecto*/

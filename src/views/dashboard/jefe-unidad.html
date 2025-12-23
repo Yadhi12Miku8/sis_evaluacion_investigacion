@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Jefe de Unidad</title>
+  <link rel="stylesheet" href="/css/dashboards/jefe-unidad.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="user-info">
+        <div id="userName">Jefe de Unidad</div>
+        <small id="userRole">Jefe de Unidad de Investigación</small>
+      </div>
+      <nav class="menu">
+        <a class="menu-item" href="#proyectos">Visualizar proyectos</a>
+        <a class="menu-item" href="#evaluar-perfiles">Evaluar perfiles de proyectos</a>
+        <a class="menu-item" href="#evaluar-informes">Evaluar informes finales</a>
+        <a class="menu-item" href="#visto-bueno-articulos">Visto Bueno artículos científicos</a>
+        <a class="menu-item" href="#solicitar-rd">Solicitar emisión de RD</a>
+        <a class="menu-item" href="#monitoreo">Monitorear avances</a>
+        <a class="menu-item" href="#observaciones">Agregar observaciones</a>
+        <a class="menu-item" href="#exposicion">Gestionar exposición anual</a>
+        <a class="menu-item" href="#reportes">Reportes estadísticos</a>
+        <a class="menu-item" href="#notificaciones">Notificaciones a docentes</a>
+      </nav>
+    </aside>
+    <div class="content">
+      <header>
+        <div class="header-content">
+          <h1>🧭 Dashboard Jefe de Unidad</h1>
+        </div>
+      </header>
+      <main>
+        <section class="welcome-card">
+          <h2>Bienvenido</h2>
+          <p>Supervisión y aprobación de proyectos de investigación.</p>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script>
+    (function(){
+      try {
+        const user = JSON.parse(localStorage.getItem('user_data')||'{}');
+        if (user && user.nombres) {
+          document.getElementById('userName').textContent = `${user.nombres} ${user.apellidos||''}`.trim();
+        }
+        if (user && user.rol) {
+          document.getElementById('userRole').textContent = user.rol;
+        }
+      } catch(e){}
+    })();
+  </script>
+</body>
+</html>

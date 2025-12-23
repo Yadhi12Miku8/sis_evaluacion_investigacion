@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Comité Editor</title>
+  <link rel="stylesheet" href="/css/dashboards/comite-editor.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="user-info">
+        <div id="userName">Comité Editor</div>
+        <small id="userRole">Comité Editor</small>
+      </div>
+      <nav class="menu">
+        <a class="menu-item" href="#articulos">Visualizar artículos científicos</a>
+        <a class="menu-item" href="#revisar">Revisar y evaluar artículos</a>
+        <a class="menu-item" href="#aprobar-correcciones">Aprobar / solicitar correcciones</a>
+        <a class="menu-item" href="#observaciones">Observaciones y comentarios</a>
+        <a class="menu-item" href="#historial">Historial de revisiones</a>
+      </nav>
+    </aside>
+    <div class="content">
+      <header>
+        <div class="header-content">
+          <h1>📝 Dashboard Comité Editor</h1>
+        </div>
+      </header>
+      <main>
+        <section class="welcome-card">
+          <h2>Bienvenido, Comité Editor</h2>
+          <p>Panel para gestionar la revisión y edición de investigaciones.</p>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script>
+    (function(){
+      try {
+        const user = JSON.parse(localStorage.getItem('user_data')||'{}');
+        if (user && user.nombres) {
+          document.getElementById('userName').textContent = `${user.nombres} ${user.apellidos||''}`.trim();
+        }
+        if (user && user.rol) {
+          document.getElementById('userRole').textContent = user.rol;
+        }
+      } catch(e){}
+    })();
+  </script>
+</body>
+</html>

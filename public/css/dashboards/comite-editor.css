@@ -1,0 +1,12 @@
+body { font-family: 'Inter', sans-serif; background: #f5f7fa; }
+header { background: #6c5ce7; color: white; padding: 20px; }
+.welcome-card { background: white; margin: 20px; padding: 20px; border-radius: 10px; }
+/* Layout & Sidebar */
+.layout { display: flex; min-height: 100vh; }
+.sidebar { width: 260px; background: #ffffff; border-right: 1px solid #e6e9ef; padding: 16px; position: sticky; top: 0; height: 100vh; }
+.user-info { margin-bottom: 16px; font-weight: 600; }
+.user-info small { display: block; color: #6b7280; font-weight: 500; }
+.menu { display: flex; flex-direction: column; gap: 8px; }
+.menu-item { display: block; padding: 10px 12px; border-radius: 8px; color: #1f2937; text-decoration: none; }
+.menu-item:hover { background: #f0f3f8; }
+.content { flex: 1; }
