@@ -33,24 +33,33 @@ function initDashboard() {
 
 function loadUserData() {
   try {
-    // Obtener datos del usuario del localStorage o simular
-    const user = JSON.parse(localStorage.getItem('user_data') || '{}');
-    
+    // Obtener datos del usuario del localStorage (seteado por login.js)
+    const stored = localStorage.getItem('user_data');
+    console.log('DEBUG: stored user_data from localStorage =', stored);
+    let user = null;
+    if (stored) {
+      try {
+        user = JSON.parse(stored);
+        console.log('DEBUG: parsed user =', user);
+      } catch (e) {
+        console.error('Error parseando user_data:', e);
+      }
+    }
+
+    // Si no hay datos en localStorage, mostrar fallback (no debería pasar si el login funciona)
     if (!user || !user.nombres) {
-      // Datos de ejemplo para demostración
-      user.nombres = 'Juan Carlos';
-      user.apellidos = 'Pérez Rodríguez';
-      user.rol = 'Docente Investigador';
-      user.email = 'jperez@iestp-aacd.edu.pe';
-      user.especialidad = 'Ingeniería de Sistemas';
-      user.codigo = 'DOC-2024-001';
+      console.warn('DEBUG: usando fallback porque no hay user o nombres');
+      user = {
+        nombres: 'Juan Carlos',
+        apellidos: 'Pérez Rodríguez',
+        rol: 'Docente Investigador'
+      };
+    } else {
+      console.log('DEBUG: usando datos reales del usuario:', user.nombres, user.apellidos);
     }
     
     // Actualizar interfaz con datos del usuario
     updateUserInterface(user);
-    
-    // Guardar datos en localStorage para persistencia
-    localStorage.setItem('user_data', JSON.stringify(user));
     
   } catch (error) {
     console.error('Error al cargar datos del usuario:', error);

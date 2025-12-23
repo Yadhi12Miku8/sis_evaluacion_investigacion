@@ -29,6 +29,26 @@ class Usuario {
     return `${this.nombres} ${this.apellidos}`;
   }
 
+  getNombreCompleto() {
+    return this.nombreCompleto;
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      dni: this.dni,
+      nombres: this.nombres,
+      apellidos: this.apellidos,
+      correo_institucional: this.correoInstitucional,
+      telefono: this.telefono,
+      programa_estudio_id: this.programaEstudioId,
+      rol: this.rol,
+      estado: this.estado,
+      fecha_registro: this.fechaRegistro,
+      nombre_completo: this.nombreCompleto
+    };
+  }
+
   esActivo() {
     return this.estado === 'Activo';
   }

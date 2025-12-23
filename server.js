@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const crypto = require('crypto');
 
 // Importar rutas
 const authRoutes = require('./src/routes/auth.routes');
@@ -452,6 +453,166 @@ app.get('/api/usuarios', async (req, res) => {
     }
 });
 
+app.get('/api/usuarios/id/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ success: false, message: 'ID inválido' });
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      'SELECT id, dni, nombres, apellidos, correo_institucional, telefono, programa_estudio_id, rol, estado FROM usuarios WHERE id = ? LIMIT 1',
+      [id]
+    );
+    conn.release();
+    const usuario = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+    if (!usuario) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    res.json({ success: true, data: usuario });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Error al obtener usuario' });
+  }
+});
+
+app.post('/api/usuarios', async (req, res) => {
+  const body = req.body || {};
+  const required = ['dni', 'nombres', 'apellidos', 'correo_institucional', 'rol', 'password'];
+  const missing = required.filter(k => !String(body[k] || '').trim());
+  if (missing.length) return res.status(400).json({ success: false, message: `Campos requeridos: ${missing.join(', ')}` });
+
+  try {
+    const conn = await pool.getConnection();
+    const [exists] = await conn.query('SELECT id FROM usuarios WHERE correo_institucional = ? LIMIT 1', [String(body.correo_institucional).trim()]);
+    if (Array.isArray(exists) && exists.length > 0) {
+      conn.release();
+      return res.status(409).json({ success: false, message: 'Ya existe un usuario con ese correo institucional' });
+    }
+
+    const passwordHash = crypto.createHash('sha256').update(String(body.password)).digest('hex');
+    const estado = body.estado ? String(body.estado).trim() : 'Activo';
+
+    const [result] = await conn.query(
+      `INSERT INTO usuarios (dni, nombres, apellidos, correo_institucional, telefono, programa_estudio_id, rol, estado, password, fecha_registro)
+       VALUES (?,?,?,?,?,?,?,?,?, NOW())`,
+      [
+        String(body.dni).trim(),
+        String(body.nombres).trim(),
+        String(body.apellidos).trim(),
+        String(body.correo_institucional).trim(),
+        body.telefono ? String(body.telefono).trim() : null,
+        body.programa_estudio_id || null,
+        String(body.rol).trim(),
+        estado,
+        passwordHash
+      ]
+    );
+
+    const insertedId = result && result.insertId ? result.insertId : null;
+    const [rows] = await conn.query(
+      'SELECT id, dni, nombres, apellidos, correo_institucional, telefono, programa_estudio_id, rol, estado FROM usuarios WHERE id = ? LIMIT 1',
+      [insertedId]
+    );
+    conn.release();
+    res.json({ success: true, data: (rows && rows[0]) || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Error al crear usuario' });
+  }
+});
+
+app.put('/api/usuarios/id/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ success: false, message: 'ID inválido' });
+  const body = req.body || {};
+
+  try {
+    const conn = await pool.getConnection();
+    const [rowsUser] = await conn.query('SELECT id, correo_institucional FROM usuarios WHERE id = ? LIMIT 1', [id]);
+    const current = Array.isArray(rowsUser) && rowsUser.length > 0 ? rowsUser[0] : null;
+    if (!current) {
+      conn.release();
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    if (body.correo_institucional && String(body.correo_institucional).trim() !== String(current.correo_institucional).trim()) {
+      const [exists] = await conn.query('SELECT id FROM usuarios WHERE correo_institucional = ? LIMIT 1', [String(body.correo_institucional).trim()]);
+      if (Array.isArray(exists) && exists.length > 0) {
+        conn.release();
+        return res.status(409).json({ success: false, message: 'Ya existe un usuario con ese correo institucional' });
+      }
+    }
+
+    const sets = [];
+    const params = [];
+    const allowed = ['dni', 'nombres', 'apellidos', 'correo_institucional', 'telefono', 'programa_estudio_id', 'rol', 'estado'];
+    allowed.forEach(k => {
+      if (Object.prototype.hasOwnProperty.call(body, k)) {
+        sets.push(`${k} = ?`);
+        params.push(body[k] === '' ? null : body[k]);
+      }
+    });
+
+    if (body.password) {
+      sets.push('password = ?');
+      params.push(crypto.createHash('sha256').update(String(body.password)).digest('hex'));
+    }
+
+    if (sets.length > 0) {
+      params.push(id);
+      await conn.query(`UPDATE usuarios SET ${sets.join(', ')} WHERE id = ?`, params);
+    }
+
+    const [rows] = await conn.query(
+      'SELECT id, dni, nombres, apellidos, correo_institucional, telefono, programa_estudio_id, rol, estado FROM usuarios WHERE id = ? LIMIT 1',
+      [id]
+    );
+    conn.release();
+    res.json({ success: true, data: (rows && rows[0]) || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Error al actualizar usuario' });
+  }
+});
+
+app.patch('/api/usuarios/id/:id/estado', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ success: false, message: 'ID inválido' });
+  const estado = req.body && req.body.estado ? String(req.body.estado).trim() : '';
+  if (!estado || !['Activo', 'Inactivo', 'Pendiente'].includes(estado)) {
+    return res.status(400).json({ success: false, message: 'Estado inválido (Activo, Inactivo, Pendiente)' });
+  }
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query('UPDATE usuarios SET estado = ? WHERE id = ?', [estado, id]);
+    if (!result || result.affectedRows === 0) {
+      conn.release();
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+    const [rows] = await conn.query(
+      'SELECT id, dni, nombres, apellidos, correo_institucional, telefono, programa_estudio_id, rol, estado FROM usuarios WHERE id = ? LIMIT 1',
+      [id]
+    );
+    conn.release();
+    res.json({ success: true, data: (rows && rows[0]) || null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Error al actualizar estado' });
+  }
+});
+
+app.delete('/api/usuarios/id/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ success: false, message: 'ID inválido' });
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query('DELETE FROM usuarios WHERE id = ?', [id]);
+    conn.release();
+    if (!result || result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    res.json({ success: true, deleted: true, id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Error al eliminar usuario' });
+  }
+});
+
 // Ruta para obtener programas de estudio
 app.get('/api/programas', async (req, res) => {
     try {
@@ -485,6 +646,62 @@ app.get('/api/lineas/:programa_id', async (req, res) => {
         console.error(err);
         res.status(500).json({ error: 'Error al obtener líneas' });
     }
+});
+
+// Catálogos (para el dashboard admin)
+app.get('/api/catalogos/programas', async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query('SELECT id, nombre, estado FROM programas_estudio ORDER BY nombre');
+    conn.release();
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener programas' });
+  }
+});
+
+app.get('/api/catalogos/lineas', async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      `SELECT l.id, l.nombre, l.estado, l.programa_estudio_id, p.nombre AS programa
+       FROM lineas_investigacion l
+       LEFT JOIN programas_estudio p ON p.id = l.programa_estudio_id
+       ORDER BY p.nombre, l.nombre`
+    );
+    conn.release();
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener líneas' });
+  }
+});
+
+app.get('/api/catalogos/departamentos', async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      `SELECT p.id, p.nombre, p.estado, COUNT(u.id) AS usuarios
+       FROM programas_estudio p
+       LEFT JOIN usuarios u ON u.programa_estudio_id = p.id
+       GROUP BY p.id, p.nombre, p.estado
+       ORDER BY p.nombre`
+    );
+    conn.release();
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener departamentos' });
+  }
+});
+
+app.get('/api/catalogos/tipos-proyecto', async (req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query('SELECT DISTINCT tipo FROM proyectos ORDER BY tipo');
+    conn.release();
+    res.json({ success: true, data: rows.map(r => ({ tipo: r.tipo })) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener tipos de proyecto' });
+  }
 });
 
 // Rutas de API

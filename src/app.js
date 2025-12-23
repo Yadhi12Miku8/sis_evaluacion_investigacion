@@ -7,6 +7,7 @@ const usuarioRepository = require('./src/repositories/Usuario.repository');
 const authRepository = require('./src/repositories/Auth.repository');
 const jwtUtil = require('./src/utils/jwt');
 const bcryptUtil = require('./src/utils/bcrypt');
+const crypto = require('crypto');
 
 class SistemaInvestigacionApp {
     constructor() {
@@ -346,6 +347,129 @@ class SistemaInvestigacionApp {
         }
     }
 
+    async handleGetUsuarioById(req, res, id) {
+        try {
+            const usuario = await usuarioRepository.findById(id);
+
+            if (!usuario) {
+                return this.sendError(res, 404, `Usuario con ID ${id} no encontrado`);
+            }
+
+            this.sendSuccess(res, usuario.toJSON(), 'Usuario encontrado');
+
+        } catch (error) {
+            logger.error(`Error obteniendo usuario ID ${id}:`, error.message);
+            this.sendError(res, 500, 'Error al obtener usuario');
+        }
+    }
+
+    async handleCreateUsuario(req, res) {
+        try {
+            const body = await this.parseBody(req);
+
+            const required = ['dni', 'nombres', 'apellidos', 'correo_institucional', 'rol', 'password'];
+            const missing = required.filter(k => !body || !String(body[k] || '').trim());
+            if (missing.length) {
+                return this.sendError(res, 400, `Campos requeridos: ${missing.join(', ')}`);
+            }
+
+            const existing = await usuarioRepository.findByEmail(body.correo_institucional);
+            if (existing) {
+                return this.sendError(res, 409, 'Ya existe un usuario con ese correo institucional');
+            }
+
+            const passwordHash = crypto.createHash('sha256').update(String(body.password)).digest('hex');
+
+            const created = await usuarioRepository.create({
+                dni: String(body.dni).trim(),
+                nombres: String(body.nombres).trim(),
+                apellidos: String(body.apellidos).trim(),
+                correo_institucional: String(body.correo_institucional).trim(),
+                telefono: body.telefono ? String(body.telefono).trim() : null,
+                programa_estudio_id: body.programa_estudio_id || null,
+                rol: String(body.rol).trim(),
+                estado: body.estado ? String(body.estado).trim() : 'Activo',
+                password: passwordHash
+            });
+
+            if (!created) {
+                return this.sendError(res, 500, 'No se pudo crear el usuario');
+            }
+
+            this.sendSuccess(res, created.toJSON(), 'Usuario creado exitosamente');
+        } catch (error) {
+            logger.error('Error creando usuario:', error.message);
+            this.sendError(res, 500, 'Error al crear usuario');
+        }
+    }
+
+    async handleUpdateUsuario(req, res, id) {
+        try {
+            const body = await this.parseBody(req);
+            const usuario = await usuarioRepository.findById(id);
+            if (!usuario) {
+                return this.sendError(res, 404, `Usuario con ID ${id} no encontrado`);
+            }
+
+            const update = {};
+            const fields = ['dni', 'nombres', 'apellidos', 'correo_institucional', 'telefono', 'programa_estudio_id', 'rol', 'estado'];
+            fields.forEach(k => {
+                if (Object.prototype.hasOwnProperty.call(body, k)) update[k] = body[k];
+            });
+
+            if (body.password) {
+                update.password = crypto.createHash('sha256').update(String(body.password)).digest('hex');
+            }
+
+            if (update.correo_institucional && String(update.correo_institucional).trim() !== String(usuario.correoInstitucional).trim()) {
+                const existing = await usuarioRepository.findByEmail(String(update.correo_institucional).trim());
+                if (existing && Number(existing.id) !== Number(id)) {
+                    return this.sendError(res, 409, 'Ya existe un usuario con ese correo institucional');
+                }
+            }
+
+            const updated = await usuarioRepository.updateById(id, update);
+            this.sendSuccess(res, updated ? updated.toJSON() : null, 'Usuario actualizado');
+        } catch (error) {
+            logger.error('Error actualizando usuario:', error.message);
+            this.sendError(res, 500, 'Error al actualizar usuario');
+        }
+    }
+
+    async handleUpdateUsuarioEstado(req, res, id) {
+        try {
+            const body = await this.parseBody(req);
+            const estado = body && body.estado ? String(body.estado).trim() : '';
+            if (!estado || !['Activo', 'Inactivo', 'Pendiente'].includes(estado)) {
+                return this.sendError(res, 400, 'Estado inválido (Activo, Inactivo, Pendiente)');
+            }
+
+            const usuario = await usuarioRepository.findById(id);
+            if (!usuario) {
+                return this.sendError(res, 404, `Usuario con ID ${id} no encontrado`);
+            }
+
+            const updated = await usuarioRepository.updateEstado(id, estado);
+            this.sendSuccess(res, updated ? updated.toJSON() : null, 'Estado actualizado');
+        } catch (error) {
+            logger.error('Error actualizando estado:', error.message);
+            this.sendError(res, 500, 'Error al actualizar estado');
+        }
+    }
+
+    async handleDeleteUsuario(req, res, id) {
+        try {
+            const ok = await usuarioRepository.deleteById(id);
+            if (!ok) {
+                return this.sendError(res, 404, `Usuario con ID ${id} no encontrado`);
+            }
+            this.sendSuccess(res, { deleted: true, id }, 'Usuario eliminado');
+        } catch (error) {
+            logger.error('Error eliminando usuario:', error.message);
+            this.sendError(res, 500, 'Error al eliminar usuario');
+        }
+    }
+
     getHomePage() {
         return `<!DOCTYPE html>
 <html lang="es">
@@ -428,7 +552,7 @@ class SistemaInvestigacionApp {
         </div>
         
         <footer>
-            <p>© 2024 Sistema de Gestión de Investigación e Innovación</p>
+            <p> 2024 Sistema de Gestión de Investigación e Innovación</p>
             <p>Servidor ejecutándose en puerto: ${env.APP_PORT}</p>
         </footer>
     </div>
@@ -472,54 +596,105 @@ class SistemaInvestigacionApp {
                         name="email" 
                         placeholder="ejemplo@institutocajas.edu.pe" 
                         required
-                    <script src="/js/login-inline.js"></script>
-                        // Redirigir después de 1.5 segundos
-                        setTimeout(() => {
-                            window.location.href = '/dashboard';
-                        }, 1500);
+                    />
+                </div>
+                <div class="form-group">
+                    <label for="password">
+                        <i class="fas fa-lock"></i> Contraseña
+                    </label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Ingrese su contraseña" 
+                        required
+                    />
+                </div>
+                <button id="submitBtn" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                </button>
+            </form>
+            <div id="alert" class="alert"></div>
+        </div>
+        
+        <script>
+            class LoginManager {
+                constructor() {
+                    this.submitBtn = document.getElementById('submitBtn');
+                    this.alert = document.getElementById('alert');
+                    this.loginForm = document.getElementById('loginForm');
+                    this.emailInput = document.getElementById('email');
+                    this.passwordInput = document.getElementById('password');
+                    
+                    this.loginForm.addEventListener('submit', this.handleSubmit.bind(this));
+                }
+                
+                async handleSubmit(event) {
+                    event.preventDefault();
+                    this.setLoading(true);
+                    
+                    try {
+                        const response = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                email: this.emailInput.value,
+                                password: this.passwordInput.value
+                            })
+                        });
                         
-                    } else {
-                        // Error de login
-                        this.showAlert(data.error || 'Credenciales inválidas', 'error');
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            // Redirigir después de 1.5 segundos
+                            setTimeout(() => {
+                                window.location.href = '/dashboard';
+                            }, 1500);
+                            
+                        } else {
+                            // Error de login
+                            this.showAlert(data.error || 'Credenciales inválidas', 'error');
+                            this.setLoading(false);
+                        }
+                        
+                    } catch (error) {
+                        // Error de conexión
+                        console.error('Error:', error);
+                        this.showAlert('Error de conexión con el servidor', 'error');
                         this.setLoading(false);
                     }
-                    
-                } catch (error) {
-                    // Error de conexión
-                    console.error('Error:', error);
-                    this.showAlert('Error de conexión con el servidor', 'error');
-                    this.setLoading(false);
                 }
-            }
-            
-            showAlert(message, type = 'info') {
-                this.alert.textContent = message;
-                this.alert.className = \`alert \${type}\`;
-                this.alert.style.display = 'block';
                 
-                // Ocultar alerta después de 5 segundos
-                setTimeout(() => {
-                    this.alert.style.display = 'none';
-                }, 5000);
-            }
-            
-            setLoading(isLoading) {
-                if (isLoading) {
-                    this.submitBtn.textContent = 'Autenticando...';
-                    this.submitBtn.disabled = true;
-                } else {
-                    this.submitBtn.textContent = 'Iniciar Sesión';
-                    this.submitBtn.disabled = false;
+                showAlert(message, type = 'info') {
+                    this.alert.textContent = message;
+                    this.alert.className = 'alert ' + type;
+                    this.alert.style.display = 'block';
+                    
+                    // Ocultar alerta después de 5 segundos
+                    setTimeout(() => {
+                        this.alert.style.display = 'none';
+                    }, 5000);
+                }
+                
+                setLoading(isLoading) {
+                    if (isLoading) {
+                        this.submitBtn.textContent = 'Autenticando...';
+                        this.submitBtn.disabled = true;
+                    } else {
+                        this.submitBtn.textContent = 'Iniciar Sesión';
+                        this.submitBtn.disabled = false;
+                    }
                 }
             }
-        }
-        
-        // Inicializar cuando el DOM esté cargado
-        document.addEventListener('DOMContentLoaded', () => {
-            new LoginManager();
-        });
-    </script>
-</body>
+            
+            // Inicializar cuando el DOM esté cargado
+            document.addEventListener('DOMContentLoaded', () => {
+                new LoginManager();
+            });
+        </script>
+    </body>
 </html>`;
     }
 
@@ -533,6 +708,31 @@ class SistemaInvestigacionApp {
     <link rel="stylesheet" href="/css/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="/js/dashboard-inline.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-flask"></i>
+                <div>
+                    <h1>Sistema de Investigación</h1>
+                    <p>Dashboard</p>
+                </div>
+            </div>
+            <div class="user-info">
+                <span>${user.nombre_completo}</span>
+                <button id="logoutBtn" class="btn btn-secondary">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+            </div>
+        </header>
+        
+        <div class="content">
+            <div class="card">
+                <h2><i class="fas fa-tachometer-alt"></i> Dashboard</h2>
+                <p>Bienvenido al dashboard del sistema de gestión de investigación.</p>
+                
+                <div class="quick-actions">
                     <button class="action-btn" onclick="searchUsers()">
                         <i class="fas fa-search"></i>
                         <span>Buscar Usuarios</span>
@@ -581,7 +781,7 @@ class SistemaInvestigacionApp {
                 await fetch('/api/auth/logout', {
                     method: 'POST',
                     headers: {
-                        'Authorization': \`Bearer \${token}\`,
+                        'Authorization': 'Bearer ' + token,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -597,7 +797,7 @@ class SistemaInvestigacionApp {
         function searchUsers() {
             const term = prompt('Ingresa el nombre a buscar:');
             if (term) {
-                window.open(\`/api/usuarios/search?term=\${encodeURIComponent(term)}\`, '_blank');
+                window.open('/api/usuarios/search?term=' + encodeURIComponent(term), '_blank');
             }
         }
         
@@ -607,9 +807,9 @@ class SistemaInvestigacionApp {
                 const data = await response.json();
                 
                 if (data.status === 'healthy') {
-                    alert('✅ Sistema funcionando correctamente\\n📊 Base de datos: Conectada');
+                    alert('✅ Sistema funcionando correctamente\n📊 Base de datos: Conectada');
                 } else {
-                    alert('⚠️ Sistema tiene problemas\\n📊 Base de datos: Desconectada');
+                    alert('⚠️ Sistema tiene problemas\n📊 Base de datos: Desconectada');
                 }
             } catch (error) {
                 alert('❌ Error al verificar el estado del sistema');
@@ -643,7 +843,7 @@ class SistemaInvestigacionApp {
                 
                 const response = await fetch('/api/auth/verify', {
                     headers: {
-                        'Authorization': \`Bearer \${token}\`
+                        'Authorization': 'Bearer ' + token
                     }
                 });
                 
@@ -662,6 +862,9 @@ class SistemaInvestigacionApp {
         
         // Verificar al cargar la página
         document.addEventListener('DOMContentLoaded', verifyAuth);
+        
+        // Agregar evento de logout
+        document.getElementById('logoutBtn').addEventListener('click', logout);
     </script>
 </body>
 </html>`;
@@ -762,6 +965,39 @@ class SistemaInvestigacionApp {
                 
                 if (path === '/api/usuarios' && method === 'GET') {
                     return await this.handleGetUsuarios(req, res, parsed.query);
+                }
+                
+                if (path === '/api/usuarios' && method === 'POST') {
+                    return await this.handleCreateUsuario(req, res);
+                }
+                
+                if (path.startsWith('/api/usuarios/id/') && method === 'GET') {
+                    const id = Number(path.split('/')[4]);
+                    if (Number.isFinite(id) && id > 0) {
+                        return await this.handleGetUsuarioById(req, res, id);
+                    }
+                }
+                
+                if (path.startsWith('/api/usuarios/id/') && method === 'PUT') {
+                    const id = Number(path.split('/')[4]);
+                    if (Number.isFinite(id) && id > 0) {
+                        return await this.handleUpdateUsuario(req, res, id);
+                    }
+                }
+                
+                if (path.startsWith('/api/usuarios/id/') && path.endsWith('/estado') && method === 'PATCH') {
+                    const parts = path.split('/');
+                    const id = Number(parts[4]);
+                    if (Number.isFinite(id) && id > 0) {
+                        return await this.handleUpdateUsuarioEstado(req, res, id);
+                    }
+                }
+                
+                if (path.startsWith('/api/usuarios/id/') && method === 'DELETE') {
+                    const id = Number(path.split('/')[4]);
+                    if (Number.isFinite(id) && id > 0) {
+                        return await this.handleDeleteUsuario(req, res, id);
+                    }
                 }
                 
                 if (path.startsWith('/api/usuarios/') && method === 'GET') {

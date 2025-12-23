@@ -17,6 +17,185 @@ document.addEventListener('DOMContentLoaded', function() {
   handleHashNavigation();
 });
 
+function getSelectedRequestIds() {
+  const checkboxes = Array.from(document.querySelectorAll('.request-checkbox:checked'));
+  return checkboxes.map(cb => Number(cb.dataset.id)).filter(Boolean);
+}
+
+function openCatalogModal(type) {
+  const modal = document.getElementById('catalogModal');
+  if (!modal) return;
+  const titleEl = document.getElementById('catalogModalTitle');
+  const bodyEl = document.getElementById('catalogModalBody');
+  if (!bodyEl) return;
+
+  const titleMap = {
+    programas: 'Programas Académicos',
+    lineas: 'Líneas de Investigación',
+    departamentos: 'Departamentos',
+    'tipos-proyecto': 'Tipos de Proyecto'
+  };
+
+  if (titleEl) {
+    titleEl.innerHTML = `<i class="fas fa-folder-open"></i> ${titleMap[type] || 'Catálogo'}`;
+  }
+
+  bodyEl.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i><span>Cargando...</span></div>';
+  modal.classList.add('active');
+
+  const endpointMap = {
+    programas: '/api/catalogos/programas',
+    lineas: '/api/catalogos/lineas',
+    departamentos: '/api/catalogos/departamentos',
+    'tipos-proyecto': '/api/catalogos/tipos-proyecto'
+  };
+
+  const url = endpointMap[type];
+  if (!url) {
+    bodyEl.textContent = 'Catálogo no disponible';
+    return;
+  }
+
+  fetch(url)
+    .then(res => res.json())
+    .then(data => {
+      const list = data && data.success && Array.isArray(data.data) ? data.data : [];
+      bodyEl.innerHTML = '';
+
+      if (list.length === 0) {
+        bodyEl.innerHTML = '<p>No hay registros.</p>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.className = 'admin-table';
+
+      const thead = document.createElement('thead');
+      const trh = document.createElement('tr');
+
+      const cols = type === 'programas'
+        ? ['ID', 'Nombre', 'Estado']
+        : type === 'lineas'
+          ? ['ID', 'Programa', 'Nombre', 'Estado']
+          : type === 'departamentos'
+            ? ['ID', 'Nombre', 'Estado', 'Usuarios']
+            : ['Tipo'];
+
+      cols.forEach(c => {
+        const th = document.createElement('th');
+        th.textContent = c;
+        trh.appendChild(th);
+      });
+      thead.appendChild(trh);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      list.forEach(item => {
+        const tr = document.createElement('tr');
+        const cells = type === 'programas'
+          ? [item.id, item.nombre, item.estado]
+          : type === 'lineas'
+            ? [item.id, item.programa || '-', item.nombre, item.estado]
+            : type === 'departamentos'
+              ? [item.id, item.nombre, item.estado, item.usuarios]
+              : [item.tipo];
+
+        cells.forEach(v => {
+          const td = document.createElement('td');
+          td.textContent = v == null ? '' : String(v);
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'admin-table-container';
+      wrapper.appendChild(table);
+      bodyEl.appendChild(wrapper);
+    })
+    .catch(() => {
+      bodyEl.textContent = 'Error cargando el catálogo.';
+    });
+}
+
+function closeCatalogModal() {
+  const modal = document.getElementById('catalogModal');
+  if (!modal) return;
+  modal.classList.remove('active');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const closeCatalogBtn = document.getElementById('closeCatalogBtn');
+  if (closeCatalogBtn) closeCatalogBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    closeCatalogModal();
+  });
+
+  const catalogModalClose = document.getElementById('catalogModalClose');
+  if (catalogModalClose) catalogModalClose.addEventListener('click', function(e) {
+    e.preventDefault();
+    closeCatalogModal();
+  });
+
+  const modal = document.getElementById('catalogModal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) closeCatalogModal();
+    });
+  }
+});
+
+function setAllRequestCheckboxes(checked) {
+  const checkboxes = Array.from(document.querySelectorAll('.request-checkbox'));
+  checkboxes.forEach(cb => {
+    cb.checked = !!checked;
+  });
+  const selectAll = document.getElementById('selectAll');
+  if (selectAll) selectAll.checked = !!checked;
+}
+
+function buildSelectedUsersList(ids) {
+  const container = document.getElementById('selectedUsersList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const byId = new Map();
+  Array.from(document.querySelectorAll('.request-checkbox')).forEach(cb => {
+    const id = Number(cb.dataset.id);
+    const row = cb.closest('tr');
+    const nameCell = row ? row.querySelector('td:nth-child(2)') : null;
+    const emailCell = row ? row.querySelector('td:nth-child(3)') : null;
+    byId.set(id, {
+      name: nameCell ? nameCell.textContent.trim() : `ID ${id}`,
+      email: emailCell ? emailCell.textContent.trim() : ''
+    });
+  });
+
+  ids.forEach(id => {
+    const u = byId.get(id) || { name: `ID ${id}`, email: '' };
+    const item = document.createElement('div');
+    item.className = 'selected-user-item';
+    item.textContent = u.email ? `${u.name} (${u.email})` : u.name;
+    container.appendChild(item);
+  });
+}
+
+function openApproveModal(ids) {
+  const modal = document.getElementById('approveModal');
+  if (!modal) return;
+
+  const finalIds = Array.isArray(ids) ? ids : [];
+  buildSelectedUsersList(finalIds);
+  modal.classList.add('active');
+}
+
+function closeApproveModal() {
+  const modal = document.getElementById('approveModal');
+  if (!modal) return;
+  modal.classList.remove('active');
+}
+
 function initAdminDashboard() {
   console.log('Dashboard Administrador iniciado');
   
@@ -230,14 +409,16 @@ function loadUsers(filters = {}) {
       const container = document.getElementById('usersGrid');
       if (!container) return;
       container.innerHTML = '';
-      const list = (data && data.success && Array.isArray(data.usuarios)) ? data.usuarios : [];
+      const payload = data && data.success ? (data.data || data) : {};
+      const list = Array.isArray(payload.usuarios) ? payload.usuarios : [];
       list.forEach(u => {
         const user = {
           id: u.id,
           name: `${u.nombres} ${u.apellidos}`,
           email: u.correo_institucional,
           role: u.rol,
-          status: u.estado === 'Activo' ? 'active' : 'inactive'
+          estadoRaw: u.estado,
+          status: u.estado === 'Activo' ? 'active' : (u.estado === 'Inactivo' ? 'inactive' : 'pending')
         };
         const userCard = createUserCard(user);
         container.appendChild(userCard);
@@ -250,22 +431,32 @@ function createUserCard(user) {
   const card = document.createElement('div');
   card.className = 'user-card';
   card.innerHTML = `
-    <div class="user-avatar">
-      <i class="fas fa-user"></i>
-    </div>
-    <div class="user-details">
-      <div class="user-name">${user.name}</div>
-      <div class="user-email">${user.email}</div>
-      <div>
-        <span class="user-role">${user.role}</span>
-        <span class="user-status ${user.status}">${user.status === 'active' ? 'Activo' : 
-          user.status === 'inactive' ? 'Inactivo' : 'Pendiente'}</span>
+    <div class="user-card-top">
+      <div class="user-meta">
+        <div class="user-avatar">
+          <i class="fas fa-user"></i>
+        </div>
+        <div class="user-identity">
+          <div class="user-name" title="${user.name}">${user.name}</div>
+          <div class="user-email" title="${user.email}">${user.email}</div>
+        </div>
+      </div>
+      <div class="user-actions">
+        <button class="btn-icon small" onclick="editUser(${user.id})" title="Editar">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn-icon small" onclick="toggleUserEstado(${user.id}, '${user.estadoRaw}')" title="Activar/Inactivar">
+          <i class="fas fa-power-off"></i>
+        </button>
+        <button class="btn-icon small" onclick="deleteUser(${user.id})" title="Eliminar">
+          <i class="fas fa-trash"></i>
+        </button>
       </div>
     </div>
-    <div class="user-actions">
-      <button class="btn-icon small" onclick="editUser(${user.id})">
-        <i class="fas fa-edit"></i>
-      </button>
+    <div class="user-card-bottom">
+      <span class="user-role">${user.role}</span>
+      <span class="user-status ${user.status}">${user.status === 'active' ? 'Activo' : 
+        user.status === 'inactive' ? 'Inactivo' : 'Pendiente'}</span>
     </div>
   `;
   return card;
@@ -342,10 +533,17 @@ function setupAdminEventListeners() {
   const approveAllBtn = document.getElementById('approveAllBtn');
   if (approveAllBtn) {
     approveAllBtn.addEventListener('click', function() {
-      const modal = document.getElementById('approveModal');
-      if (modal) {
-        modal.classList.add('active');
+      // Si no hay ninguna marcada, seleccionar todas
+      const ids = getSelectedRequestIds();
+      if (ids.length === 0) {
+        setAllRequestCheckboxes(true);
       }
+      const finalIds = getSelectedRequestIds();
+      if (finalIds.length === 0) {
+        alert('No hay solicitudes para aprobar');
+        return;
+      }
+      openApproveModal(finalIds);
     });
   }
   
@@ -353,7 +551,7 @@ function setupAdminEventListeners() {
   const addUserBtn = document.getElementById('addUserBtn');
   if (addUserBtn) {
     addUserBtn.addEventListener('click', function() {
-      alert('Redirigiendo al formulario de nuevo usuario...');
+      openUserModal();
     });
   }
   
@@ -369,7 +567,18 @@ function setupAdminEventListeners() {
   const manageCatalogsBtn = document.getElementById('manageCatalogsBtn');
   if (manageCatalogsBtn) {
     manageCatalogsBtn.addEventListener('click', function() {
-      alert('Redirigiendo a la gestión de catálogos...');
+      openCatalogModal('programas');
+    });
+  }
+
+  const catalogsSection = document.getElementById('catalogos');
+  if (catalogsSection) {
+    catalogsSection.addEventListener('click', function(e) {
+      const btn = e.target.closest('button.btn-catalog');
+      if (!btn) return;
+      const type = btn.dataset.catalog || '';
+      if (!type) return;
+      openCatalogModal(type);
     });
   }
   
@@ -429,25 +638,36 @@ function setupAdminEventListeners() {
   }
   
   // Botones del modal
-  const modalClose = document.querySelector('.modal-close');
-  if (modalClose) {
-    modalClose.addEventListener('click', function() {
-      document.getElementById('approveModal').classList.remove('active');
+  const approveModal = document.getElementById('approveModal');
+  if (approveModal) {
+    // Cerrar con X
+    const modalClose = approveModal.querySelector('.modal-close');
+    if (modalClose) {
+      modalClose.addEventListener('click', function(e) {
+        e.preventDefault();
+        closeApproveModal();
+      });
+    }
+
+    // Cerrar al hacer click fuera
+    approveModal.addEventListener('click', function(e) {
+      if (e.target === approveModal) {
+        closeApproveModal();
+      }
     });
   }
   
   const cancelApproveBtn = document.getElementById('cancelApproveBtn');
   if (cancelApproveBtn) {
     cancelApproveBtn.addEventListener('click', function() {
-      document.getElementById('approveModal').classList.remove('active');
+      closeApproveModal();
     });
   }
   
   const confirmApproveBtn = document.getElementById('confirmApproveBtn');
   if (confirmApproveBtn) {
     confirmApproveBtn.addEventListener('click', function() {
-      const checkboxes = Array.from(document.querySelectorAll('.request-checkbox:checked'));
-      const ids = checkboxes.map(cb => Number(cb.dataset.id)).filter(Boolean);
+      const ids = getSelectedRequestIds();
       if (ids.length === 0) {
         alert('Seleccione al menos una solicitud');
         return;
@@ -461,7 +681,7 @@ function setupAdminEventListeners() {
         .then(res => res.json())
         .then(data => {
           if (!data || !data.success) throw new Error((data && data.message) || 'No se pudo aprobar');
-          document.getElementById('approveModal').classList.remove('active');
+          closeApproveModal();
           loadSystemData();
         })
         .catch(err => {
@@ -509,8 +729,156 @@ function setupAdminEventListeners() {
 
 // Funciones globales
 window.editUser = function(userId) {
-  alert(`Editando usuario ID: ${userId}`);
+  openUserModal(userId);
 };
+
+window.deleteUser = async function(userId) {
+  if (!confirm('¿Está seguro de que desea eliminar este usuario?')) return;
+  try {
+    const url = `/api/usuarios/id/${userId}`;
+    const res = await fetch(url, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data || !data.success) {
+      const msg = (data && (data.error || data.message)) || (res.status === 404 ? 'Ruta no encontrada' : 'No se pudo eliminar');
+      throw new Error(`${msg} (${res.status}) -> ${url}`);
+    }
+    loadUsers();
+  } catch (err) {
+    alert(err && err.message ? err.message : 'Error al eliminar');
+  }
+};
+
+window.toggleUserEstado = async function(userId, currentEstado) {
+  try {
+    const nextEstado = currentEstado === 'Activo' ? 'Inactivo' : 'Activo';
+    const url = `/api/usuarios/id/${userId}/estado`;
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: nextEstado })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data || !data.success) {
+      const msg = (data && (data.error || data.message)) || (res.status === 404 ? 'Ruta no encontrada' : 'No se pudo actualizar');
+      throw new Error(`${msg} (${res.status}) -> ${url}`);
+    }
+    loadUsers();
+  } catch (err) {
+    alert(err && err.message ? err.message : 'Error al actualizar estado');
+  }
+};
+
+function openUserModal(userId) {
+  const modal = document.getElementById('userModal');
+  if (!modal) return;
+  resetUserForm();
+  if (userId) {
+    document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-edit"></i> Editar Usuario';
+    loadUserIntoForm(userId);
+  } else {
+    document.getElementById('userModalTitle').innerHTML = '<i class="fas fa-user-plus"></i> Agregar Usuario';
+  }
+  modal.classList.add('active');
+}
+
+function closeUserModal() {
+  const modal = document.getElementById('userModal');
+  if (!modal) return;
+  modal.classList.remove('active');
+}
+
+function resetUserForm() {
+  const form = document.getElementById('userForm');
+  if (form) form.reset();
+  const idEl = document.getElementById('userId');
+  if (idEl) idEl.value = '';
+}
+
+async function loadUserIntoForm(userId) {
+  try {
+    const url = `/api/usuarios/id/${userId}`;
+    const res = await fetch(url);
+    const data = await res.json().catch(() => ({}));
+    const u = data && data.success ? (data.data || null) : null;
+    if (!res.ok || !u) {
+      const msg = (data && (data.error || data.message)) || (res.status === 404 ? 'Ruta no encontrada' : 'No se pudo cargar');
+      throw new Error(`${msg} (${res.status}) -> ${url}`);
+    }
+
+    document.getElementById('userId').value = u.id;
+    document.getElementById('userDni').value = u.dni || '';
+    document.getElementById('userNombres').value = u.nombres || '';
+    document.getElementById('userApellidos').value = u.apellidos || '';
+    document.getElementById('userEmail').value = u.correo_institucional || '';
+    document.getElementById('userTelefono').value = u.telefono || '';
+    document.getElementById('userRol').value = u.rol || 'Docente Investigador';
+    document.getElementById('userEstado').value = u.estado || 'Activo';
+  } catch (err) {
+    alert(err && err.message ? err.message : 'Error al cargar usuario');
+    closeUserModal();
+  }
+}
+
+async function saveUserFromModal() {
+  try {
+    const id = (document.getElementById('userId').value || '').trim();
+    const payload = {
+      dni: document.getElementById('userDni').value.trim(),
+      nombres: document.getElementById('userNombres').value.trim(),
+      apellidos: document.getElementById('userApellidos').value.trim(),
+      correo_institucional: document.getElementById('userEmail').value.trim(),
+      telefono: (document.getElementById('userTelefono').value || '').trim() || null,
+      rol: document.getElementById('userRol').value,
+      estado: document.getElementById('userEstado').value
+    };
+
+    const password = (document.getElementById('userPassword').value || '').trim();
+    if (!id && !password) {
+      alert('La contraseña es requerida al crear un usuario');
+      return;
+    }
+    if (password) payload.password = password;
+
+    const url = id ? `/api/usuarios/id/${id}` : '/api/usuarios';
+    const method = id ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data || !data.success) {
+      const msg = (data && (data.error || data.message)) || (res.status === 404 ? 'Ruta no encontrada' : 'No se pudo guardar');
+      throw new Error(`${msg} (${res.status}) -> ${method} ${url}`);
+    }
+
+    closeUserModal();
+    loadUsers();
+  } catch (err) {
+    alert(err && err.message ? err.message : 'Error al guardar');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const cancelUserBtn = document.getElementById('cancelUserBtn');
+  if (cancelUserBtn) cancelUserBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    closeUserModal();
+  });
+
+  const userModalClose = document.getElementById('userModalClose');
+  if (userModalClose) userModalClose.addEventListener('click', function(e) {
+    e.preventDefault();
+    closeUserModal();
+  });
+
+  const saveUserBtn = document.getElementById('saveUserBtn');
+  if (saveUserBtn) saveUserBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    saveUserFromModal();
+  });
+});
 
 // Actualizar hora cada minuto
 setInterval(updateLastAccessTime, 60000);
