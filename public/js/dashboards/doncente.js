@@ -69,14 +69,17 @@ function loadUserData() {
 function updateUserInterface(user) {
   // Actualizar nombre en sidebar
   const userName = `${user.nombres} ${user.apellidos || ''}`.trim();
-  document.getElementById('userName').textContent = userName;
+  const nameEl = document.getElementById('userName');
+  if (nameEl) nameEl.textContent = userName;
   
   // Actualizar nombre en banner de bienvenida
-  document.getElementById('welcomeUserName').textContent = user.nombres;
+  const welcomeEl = document.getElementById('welcomeUserName');
+  if (welcomeEl) welcomeEl.textContent = user.nombres;
   
   // Actualizar rol
   if (user.rol) {
-    document.getElementById('userRole').textContent = user.rol;
+    const roleEl = document.getElementById('userRole');
+    if (roleEl) roleEl.textContent = user.rol;
   }
   
   // Configurar enlace a proyectos del usuario
@@ -95,6 +98,7 @@ function loadDashboardData() {
     
     // Cargar proyectos del usuario
     loadUserProjects();
+    loadProgramProjects();
     
     // Cargar tareas pendientes
     loadPendingTasks();
@@ -107,6 +111,8 @@ function loadDashboardData() {
     
     // Cargar producción científica
     loadScientificProduction();
+    
+    loadEvaluationResults();
     
   }, 1500);
 }
@@ -142,6 +148,35 @@ async function loadUserProjects() {
     const container = document.querySelector('.projects-grid');
     if (!container || !user || !user.usuario_id) return;
     const resp = await fetch(`/api/proyectos/${user.usuario_id}`);
+    const data = await resp.json();
+    const projects = Array.isArray(data.proyectos) ? data.proyectos : [];
+    container.innerHTML = '';
+    projects.forEach(row => {
+      const mapped = {
+        id: row.id,
+        title: row.titulo,
+        status: mapProjectStatus(row.estado),
+        progress: 0,
+        line: row.tipo,
+        lastUpdate: row.fecha_inicio,
+        nextDeadline: row.fecha_fin
+      };
+      const el = createProjectElement(mapped);
+      container.appendChild(el);
+    });
+  } catch (e) {}
+}
+
+async function loadProgramProjects() {
+  try {
+    const token = localStorage.getItem('auth_token') || '';
+    const container = document.getElementById('programProjectsGrid');
+    if (!container) return;
+    const resp = await fetch('/api/programa/proyectos/me', {
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
     const data = await resp.json();
     const projects = Array.isArray(data.proyectos) ? data.proyectos : [];
     container.innerHTML = '';
@@ -205,6 +240,45 @@ function mapProjectStatus(estado) {
   if (s.includes('compl') || s.includes('final')) return 'completed';
   if (s.includes('eval')) return 'evaluated';
   return 'active';
+}
+
+async function loadEvaluationResults() {
+  try {
+    const stored = localStorage.getItem('user_data') || '{}';
+    const user = JSON.parse(stored);
+    const container = document.getElementById('evaluationResultsList');
+    if (!container || !user || !user.usuario_id) return;
+    const resp = await fetch(`/api/evaluaciones/by-user/${user.usuario_id}`);
+    const data = await resp.json();
+    const evals = Array.isArray(data.evaluaciones) ? data.evaluaciones : [];
+    container.innerHTML = '';
+    const latestByProject = {};
+    evals.forEach(e => {
+      const key = String(e.proyecto_id);
+      if (!latestByProject[key]) latestByProject[key] = e;
+    });
+    Object.values(latestByProject).forEach(e => {
+      const card = document.createElement('div');
+      card.className = 'project-card';
+      card.innerHTML = `
+        <div class="project-header">
+          <h3>${e.titulo || 'Proyecto'}</h3>
+          <span class="project-status ${String(e.condicion || '').toLowerCase() === 'aprobado' ? 'active' : String(e.condicion || '').toLowerCase() === 'desaprobado' ? 'pending' : 'completed'}">${e.condicion || '-'}</span>
+        </div>
+        <div class="project-details" style="padding:20px;">
+          <div class="project-meta" style="display:flex;gap:16px;flex-wrap:wrap;">
+            <span class="meta-item"><i class="fas fa-file-alt"></i> ${e.tipo || '-'}</span>
+            <span class="meta-item"><i class="fas fa-star"></i> Puntaje: ${e.puntaje_total == null ? '-' : e.puntaje_total}</span>
+            <span class="meta-item"><i class="fas fa-calendar"></i> ${new Date(e.fecha_evaluacion).toLocaleDateString('es-PE')}</span>
+          </div>
+          <div class="project-actions" style="margin-top:12px;display:flex;gap:8px;">
+            <button class="btn-action"><i class="fas fa-eye"></i> Detalles</button>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  } catch (e) {}
 }
 
 function loadPendingTasks() {
@@ -426,11 +500,27 @@ function createEventElement(event) {
 }
 
 function loadScientificProduction() {
-  // Actualizar círculos de estadísticas
-  document.getElementById('articlesCountCircle').querySelector('span').textContent = '5';
-  document.getElementById('projectsCountCircle').querySelector('span').textContent = '4';
-  document.getElementById('citationsCountCircle').querySelector('span').textContent = '12';
-  document.getElementById('participationCountCircle').querySelector('span').textContent = '8';
+  // Actualizar círculos de estadísticas (si existen en el DOM)
+  const articlesCircle = document.getElementById('articlesCountCircle');
+  if (articlesCircle && articlesCircle.querySelector) {
+    const s = articlesCircle.querySelector('span');
+    if (s) s.textContent = '5';
+  }
+  const projectsCircle = document.getElementById('projectsCountCircle');
+  if (projectsCircle && projectsCircle.querySelector) {
+    const s = projectsCircle.querySelector('span');
+    if (s) s.textContent = '4';
+  }
+  const citationsCircle = document.getElementById('citationsCountCircle');
+  if (citationsCircle && citationsCircle.querySelector) {
+    const s = citationsCircle.querySelector('span');
+    if (s) s.textContent = '12';
+  }
+  const participationCircle = document.getElementById('participationCountCircle');
+  if (participationCircle && participationCircle.querySelector) {
+    const s = participationCircle.querySelector('span');
+    if (s) s.textContent = '8';
+  }
   
   // Cargar publicaciones recientes
   const publications = [
@@ -522,6 +612,27 @@ function setupEventListeners() {
   newProjectBtns.forEach(btn => {
     btn.addEventListener('click', showNewProjectModal);
   });
+  const nuevoProyectoLink = document.querySelector('.menu a[href="#nuevo-proyecto"], a.menu-item[href="#nuevo-proyecto"]');
+  if (nuevoProyectoLink) {
+    nuevoProyectoLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      showNewProjectModal();
+    });
+  }
+  const registrarPerfilLink = document.querySelector('.menu a[href="#registrar-perfil"], a.menu-item[href="#registrar-perfil"]');
+  if (registrarPerfilLink) {
+    registrarPerfilLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      showUploadDocumentModal('Perfil');
+    });
+  }
+  const informeFinalLink = document.querySelector('.menu a[href="#informe-final"], a.menu-item[href="#informe-final"]');
+  if (informeFinalLink) {
+    informeFinalLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      showUploadDocumentModal('Informe Final');
+    });
+  }
   
   // Botones de acción rápida
   const quickActionBtns = {
@@ -669,6 +780,77 @@ function saveNewProject() {
   .catch(() => {
     alert('Error al crear proyecto');
   });
+}
+
+function showUploadDocumentModal(tipo) {
+  const modal = document.getElementById('uploadDocumentModal');
+  if (!modal) return;
+  const typeSelect = document.getElementById('uploadDocType');
+  if (typeSelect) typeSelect.value = tipo || 'Perfil';
+  populateUploadProjectSelector();
+  modal.style.display = 'block';
+}
+
+async function populateUploadProjectSelector() {
+  try {
+    const stored = localStorage.getItem('user_data') || '{}';
+    const user = JSON.parse(stored);
+    const selector = document.getElementById('uploadProjectId');
+    if (!selector || !user || !user.usuario_id) return;
+    const resp = await fetch(`/api/proyectos/${user.usuario_id}`);
+    const data = await resp.json();
+    const projects = Array.isArray(data.proyectos) ? data.proyectos : [];
+    selector.innerHTML = '<option value="">Seleccione un proyecto...</option>';
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = String(p.id);
+      opt.textContent = p.titulo;
+      selector.appendChild(opt);
+    });
+  } catch (e) {}
+}
+
+function saveUploadedDocument() {
+  const form = document.getElementById('uploadDocumentForm');
+  const projectIdInput = document.getElementById('uploadProjectId');
+  const typeSelect = document.getElementById('uploadDocType');
+  const fileInput = document.getElementById('uploadDocFile');
+  if (!form || !projectIdInput || !typeSelect || !fileInput) return;
+  const proyectoId = Number(projectIdInput.value);
+  if (!proyectoId) { alert('Ingrese un ID de proyecto válido'); return; }
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) { alert('Seleccione un archivo'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result;
+    const token = localStorage.getItem('auth_token') || '';
+    fetch('/api/documentos_proyecto/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        proyecto_id: proyectoId,
+        tipo_documento: typeSelect.value || 'Perfil',
+        nombre_archivo: file.name,
+        archivo_base64: base64
+      })
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res && res.success) {
+          alert('Documento subido y registrado');
+          form.reset();
+          const modal = document.getElementById('uploadDocumentModal');
+          if (modal) modal.style.display = 'none';
+        } else {
+          alert('Error al subir documento');
+        }
+      })
+      .catch(() => alert('Error al subir documento'));
+  };
+  reader.readAsDataURL(file);
 }
 
 function showQuickAction(action) {

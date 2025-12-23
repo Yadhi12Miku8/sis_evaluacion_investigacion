@@ -125,11 +125,11 @@ async function loadUnidadDocumentos() {
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       }
     });
-    const data = await resp.json();
-    const documentos = Array.isArray(data.documentos) ? data.documentos : [];
-    const profiles = documentos.filter(d => String(d.tipo_documento || '').toLowerCase().includes('perfil'));
-    const reports = documentos.filter(d => String(d.tipo_documento || '').toLowerCase().includes('informe'));
-    const articles = documentos.filter(d => String(d.tipo_documento || '').toLowerCase().includes('art'));
+  const data = await resp.json();
+  const documentos = Array.isArray(data.documentos) ? data.documentos : [];
+  const profiles = documentos.filter(d => String(d.tipo_documento || '').toLowerCase().includes('perfil') && String(d.estado || '').toLowerCase().includes('revision'));
+  const reports = documentos.filter(d => String(d.tipo_documento || '').toLowerCase().includes('informe') && String(d.estado || '').toLowerCase().includes('revision'));
+  const articles = documentos.filter(d => String(d.tipo_documento || '').toLowerCase().includes('art') && String(d.estado || '').toLowerCase().includes('revision'));
     const profilesBadge = document.getElementById('pendingProfilesBadge');
     const reportsBadge = document.getElementById('pendingReportsBadge');
     const articlesBadge = document.getElementById('pendingArticlesBadge');
@@ -161,16 +161,16 @@ function renderEvaluationList(containerId, docs, tipoLabel) {
         <div class="detail-item"><i class="fas fa-calendar"></i><span>${formatDate(d.fecha_subida)}</span></div>
       </div>
       <div class="evaluation-actions">
-        <button class="btn-action approve" data-proyecto="${d.proyecto_id}" data-tipo="${tipoLabel}">
+        <button class="btn-action approve" data-proyecto="${d.proyecto_id}" data-tipo="${tipoLabel}" data-titulo="${d.titulo || ''}" data-investigador="${(d.nombres || '')} ${(d.apellidos || '')}" data-ruta="${d.ruta_archivo || ''}">
           <i class="fas fa-check"></i> Aprobar
         </button>
-        <button class="btn-action reject" data-proyecto="${d.proyecto_id}" data-tipo="${tipoLabel}">
+        <button class="btn-action reject" data-proyecto="${d.proyecto_id}" data-tipo="${tipoLabel}" data-titulo="${d.titulo || ''}" data-investigador="${(d.nombres || '')} ${(d.apellidos || '')}" data-ruta="${d.ruta_archivo || ''}">
           <i class="fas fa-times"></i> Rechazar
         </button>
-        <button class="btn-action view" data-proyecto="${d.proyecto_id}">
+        <button class="btn-action view" data-proyecto="${d.proyecto_id}" data-ruta="${d.ruta_archivo || ''}">
           <i class="fas fa-eye"></i> Ver Detalles
         </button>
-        <button class="btn-action comment" data-proyecto="${d.proyecto_id}" data-tipo="${tipoLabel}">
+        <button class="btn-action comment" data-proyecto="${d.proyecto_id}" data-tipo="${tipoLabel}" data-titulo="${d.titulo || ''}" data-investigador="${(d.nombres || '')} ${(d.apellidos || '')}" data-ruta="${d.ruta_archivo || ''}">
           <i class="fas fa-comment"></i> Observar
         </button>
       </div>
@@ -186,17 +186,17 @@ function wireEvaluationActions() {
   approveBtns.forEach(btn => btn.addEventListener('click', function() {
     const pid = Number(this.dataset.proyecto);
     const tipo = this.dataset.tipo || 'Perfil';
-    openEvaluationModal(pid, tipo, 'Aprobado');
+    openEvaluationModal(pid, tipo, 'Aprobado', { titulo: this.dataset.titulo || '', investigador: this.dataset.investigador || '', ruta: this.dataset.ruta || '' });
   }));
   rejectBtns.forEach(btn => btn.addEventListener('click', function() {
     const pid = Number(this.dataset.proyecto);
     const tipo = this.dataset.tipo || 'Perfil';
-    openEvaluationModal(pid, tipo, 'Rechazado');
+    openEvaluationModal(pid, tipo, 'Desaprobado', { titulo: this.dataset.titulo || '', investigador: this.dataset.investigador || '', ruta: this.dataset.ruta || '' });
   }));
   commentBtns.forEach(btn => btn.addEventListener('click', function() {
     const pid = Number(this.dataset.proyecto);
     const tipo = this.dataset.tipo || 'Perfil';
-    openEvaluationModal(pid, tipo, 'Observado');
+    openEvaluationModal(pid, tipo, 'Regular', { titulo: this.dataset.titulo || '', investigador: this.dataset.investigador || '', ruta: this.dataset.ruta || '' });
   }));
 }
 
@@ -219,7 +219,7 @@ function wireProjectTableActions() {
   });
 }
 
-function openEvaluationModal(proyectoId, tipo, condicionPreseleccionada) {
+function openEvaluationModal(proyectoId, tipo, condicionPreseleccionada, details) {
   const modal = document.getElementById('evaluationModal');
   const body = modal ? modal.querySelector('.modal-body') : null;
   if (!modal || !body) return;
@@ -237,14 +237,28 @@ function openEvaluationModal(proyectoId, tipo, condicionPreseleccionada) {
           <label>Condición</label>
           <select id="evalCondicion">
             <option ${condicion === 'Aprobado' ? 'selected' : ''}>Aprobado</option>
-            <option ${condicion === 'Observado' ? 'selected' : ''}>Observado</option>
-            <option ${condicion === 'Rechazado' ? 'selected' : ''}>Rechazado</option>
+            <option ${condicion === 'Regular' ? 'selected' : ''}>Regular</option>
+            <option ${condicion === 'Desaprobado' ? 'selected' : ''}>Desaprobado</option>
           </select>
         </div>
         <div class="form-group">
           <label>Puntaje Total</label>
           <input type="number" id="evalPuntaje" min="0" max="100" step="1" placeholder="0 - 100">
         </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Proyecto</label>
+          <input type="text" id="evalProyectoTitulo" value="${details && details.titulo ? details.titulo : ''}" readonly>
+        </div>
+        <div class="form-group">
+          <label>Investigador</label>
+          <input type="text" id="evalInvestigador" value="${details && details.investigador ? details.investigador : ''}" readonly>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Documento</label>
+        <a id="evalDocumentoLink" href="${details && details.ruta ? details.ruta : '#'}" target="_blank" class="btn-secondary" style="display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid #e2e8f0;">Ver archivo</a>
       </div>
       <div class="form-group">
         <label>Observaciones</label>
@@ -302,6 +316,7 @@ function submitEvaluation() {
   const puntaje = Number(document.getElementById('evalPuntaje') ? document.getElementById('evalPuntaje').value : 0);
   const observaciones = document.getElementById('evalObservaciones') ? document.getElementById('evalObservaciones').value : '';
   const criteria = collectCriteria();
+  const criteriaText = criteria.map(c => `${c.criterio}:${c.puntaje}`).join(',').slice(0, 50);
   if (!proyectoId) {
     alert('Proyecto inválido');
     return;
@@ -309,7 +324,7 @@ function submitEvaluation() {
   const payload = {
     proyecto_id: proyectoId,
     tipo: tipo,
-    tabla_evaluacion: JSON.stringify(criteria),
+    tabla_evaluacion: criteriaText || null,
     puntaje_total: puntaje || null,
     condicion: condicion,
     observaciones: observaciones || null
@@ -404,48 +419,35 @@ function initTabs() {
 }
 
 function loadNotificationsHistory() {
-  // Simulación de datos de notificaciones
-  const notifications = [
-    {
-      id: 1,
-      type: 'deadline',
-      message: 'Recordatorio: Entrega de avances trimestrales',
-      date: '2024-11-10',
-      sent: true
-    },
-    {
-      id: 2,
-      type: 'observation',
-      message: 'Observaciones al proyecto IoT Agrícola',
-      date: '2024-11-08',
-      sent: true
-    },
-    {
-      id: 3,
-      type: 'approval',
-      message: 'Aprobación de perfil de proyecto',
-      date: '2024-11-05',
-      sent: true
-    }
-  ];
-  
   const historyList = document.getElementById('notificationsHistory');
   if (!historyList) return;
-  
-  notifications.forEach(notification => {
-    const item = document.createElement('div');
-    item.className = 'history-item';
-    item.innerHTML = `
-      <div class="history-icon">
-        <i class="fas fa-${getNotificationIcon(notification.type)}"></i>
-      </div>
-      <div class="history-content">
-        <p>${notification.message}</p>
-        <small>${notification.date}</small>
-      </div>
-    `;
-    historyList.appendChild(item);
-  });
+  historyList.innerHTML = '';
+  try {
+    const stored = localStorage.getItem('user_data') || '{}';
+    const user = JSON.parse(stored);
+    if (!user || !user.usuario_id) return;
+    fetch(`/api/notificaciones/${user.usuario_id}`)
+      .then(r => r.json())
+      .then(data => {
+        const rows = data && data.success && Array.isArray(data.notificaciones) ? data.notificaciones : [];
+        rows.forEach(n => {
+          const type = String(n.tipo || '').toLowerCase().includes('eval') ? 'approval' : 'reminder';
+          const item = document.createElement('div');
+          item.className = 'history-item';
+          item.innerHTML = `
+            <div class="history-icon">
+              <i class="fas fa-${getNotificationIcon(type)}"></i>
+            </div>
+            <div class="history-content">
+              <p><strong>${n.titulo || 'Notificación'}</strong> - ${n.mensaje || ''}</p>
+              <small>${new Date(n.fecha_envio).toLocaleString('es-PE')}</small>
+            </div>
+          `;
+          historyList.appendChild(item);
+        });
+      })
+      .catch(() => {});
+  } catch (_) {}
 }
 
 function getNotificationIcon(type) {

@@ -4,6 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
 
 // Importar rutas
 const authRoutes = require('./src/routes/auth.routes');
@@ -118,6 +119,16 @@ app.post('/api/proyectos', requireAuth, async (req, res) => {
     );
     const insertedId = result.insertId;
     await conn.query('INSERT INTO integrantes_proyecto (proyecto_id, usuario_id, rol) VALUES (?,?,?)', [insertedId, req.user.id, 'Investigador Principal']);
+    const [userRows] = await conn.query('SELECT programa_estudio_id FROM usuarios WHERE id = ? LIMIT 1', [req.user.id]);
+    const programaId = Array.isArray(userRows) && userRows.length ? userRows[0].programa_estudio_id : null;
+    if (programaId) {
+      const [jefes] = await conn.query("SELECT id FROM usuarios WHERE rol = 'Jefe de Unidad de Investigacion' AND programa_estudio_id = ?", [programaId]);
+      const titleN = 'Nuevo proyecto registrado';
+      const messageN = `Proyecto ${codigo}: ${titulo}`;
+      for (const j of jefes) {
+        await conn.query('INSERT INTO notificaciones (usuario_id, titulo, mensaje, tipo, leido) VALUES (?,?,?,?,0)', [j.id, titleN, messageN, 'Recordatorio']);
+      }
+    }
     conn.release();
     res.json({ success: true, proyecto: { id: insertedId, codigo, titulo, tipo } });
   } catch (err) {
@@ -133,10 +144,80 @@ app.post('/api/documentos_proyecto', requireAuth, async (req, res) => {
       'INSERT INTO documentos_proyecto (proyecto_id, tipo_documento, nombre_archivo, ruta_archivo, subido_por, estado) VALUES (?,?,?,?,?,?)',
       [proyecto_id, tipo_documento, nombre_archivo, ruta_archivo, req.user.id, estado]
     );
+    if (String(tipo_documento).toLowerCase() === 'informe final') {
+      const [projInfo] = await conn.query(
+        'SELECT p.codigo, p.titulo, u.programa_estudio_id FROM proyectos p INNER JOIN usuarios u ON p.usuario_id = u.id WHERE p.id = ? LIMIT 1',
+        [proyecto_id]
+      );
+      const info = Array.isArray(projInfo) && projInfo.length ? projInfo[0] : null;
+      if (info && info.programa_estudio_id) {
+        const [jefes] = await conn.query("SELECT id FROM usuarios WHERE rol = 'Jefe de Unidad de Investigacion' AND programa_estudio_id = ?", [info.programa_estudio_id]);
+        const titleN = 'Informe Final presentado';
+        const messageN = `Proyecto ${info.codigo}: ${info.titulo}`;
+        for (const j of jefes) {
+          await conn.query('INSERT INTO notificaciones (usuario_id, titulo, mensaje, tipo, leido) VALUES (?,?,?,?,0)', [j.id, titleN, messageN, 'Evaluacion']);
+        }
+      }
+    }
     conn.release();
     res.json({ success: true, documento_id: result.insertId });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Error al registrar documento' });
+  }
+});
+
+// Subir archivo de documento (base64) y registrar en BD
+app.post('/api/documentos_proyecto/upload', requireAuth, async (req, res) => {
+  const { proyecto_id, tipo_documento = 'Perfil', nombre_archivo = null, archivo_base64 = '' } = req.body || {};
+  if (!proyecto_id || !archivo_base64) {
+    return res.status(400).json({ success: false, message: 'Proyecto y archivo requeridos' });
+  }
+  try {
+    // Preparar carpeta destino
+    const safeProjectId = String(proyecto_id).replace(/[^0-9]/g, '');
+    const uploadsDir = path.join(__dirname, 'public', 'uploads', safeProjectId);
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    // Normalizar base64 (acepta data URL o base64 puro)
+    let base64 = String(archivo_base64);
+    const commaIdx = base64.indexOf(',');
+    if (commaIdx > -1) base64 = base64.substring(commaIdx + 1);
+    // Nombre de archivo
+    const ts = Date.now();
+    const originalName = String(nombre_archivo || `${tipo_documento}.pdf`);
+    const cleanName = originalName.replace(/[\\/:*?"<>|]+/g, '_');
+    const fileName = `${ts}_${cleanName}`;
+    const absPath = path.join(uploadsDir, fileName);
+    const relPath = `/uploads/${safeProjectId}/${fileName}`;
+    // Escribir archivo
+    const buffer = Buffer.from(base64, 'base64');
+    fs.writeFileSync(absPath, buffer);
+    // Registrar en BD
+    const conn = await pool.getConnection();
+    const [result] = await conn.query(
+      'INSERT INTO documentos_proyecto (proyecto_id, tipo_documento, nombre_archivo, ruta_archivo, subido_por, estado) VALUES (?,?,?,?,?,?)',
+      [proyecto_id, tipo_documento, cleanName, relPath, req.user.id, 'En revision']
+    );
+    // Notificar a Jefe de Unidad para evaluación
+    const [projInfo] = await conn.query(
+      'SELECT p.codigo, p.titulo, u.programa_estudio_id FROM proyectos p INNER JOIN usuarios u ON p.usuario_id = u.id WHERE p.id = ? LIMIT 1',
+      [proyecto_id]
+    );
+    const info = Array.isArray(projInfo) && projInfo.length ? projInfo[0] : null;
+    if (info && info.programa_estudio_id) {
+      const [jefes] = await conn.query("SELECT id FROM usuarios WHERE rol = 'Jefe de Unidad de Investigacion' AND programa_estudio_id = ?", [info.programa_estudio_id]);
+      const titleN = tipo_documento === 'Informe Final' ? 'Informe Final presentado' : 'Perfil presentado';
+      const messageN = `Proyecto ${info.codigo}: ${info.titulo}`;
+      for (const j of jefes) {
+        await conn.query('INSERT INTO notificaciones (usuario_id, titulo, mensaje, tipo, leido) VALUES (?,?,?,?,0)', [j.id, titleN, messageN, 'Evaluacion']);
+      }
+    }
+    conn.release();
+    res.json({ success: true, documento_id: result.insertId, ruta_archivo: relPath });
+  } catch (err) {
+    console.error('Error en upload documento:', err);
+    res.status(500).json({ success: false, message: 'Error al subir documento' });
   }
 });
 
@@ -200,6 +281,32 @@ app.get('/api/unidad/proyectos', requireAuth, async (req, res) => {
   }
 });
 
+// Proyectos del programa del usuario autenticado (para docente/investigador)
+app.get('/api/programa/proyectos/me', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const conn = await pool.getConnection();
+    const [userRows] = await conn.query('SELECT programa_estudio_id FROM usuarios WHERE id = ? LIMIT 1', [userId]);
+    if (!userRows || !userRows.length || !userRows[0].programa_estudio_id) {
+      conn.release();
+      return res.json({ success: true, proyectos: [] });
+    }
+    const programaId = userRows[0].programa_estudio_id;
+    const [rows] = await conn.query(
+      `SELECT p.*, u.nombres, u.apellidos
+       FROM proyectos p
+       INNER JOIN usuarios u ON u.id = p.usuario_id
+       WHERE u.programa_estudio_id = ?
+       ORDER BY p.fecha_registro DESC`,
+      [programaId]
+    );
+    conn.release();
+    res.json({ success: true, proyectos: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener proyectos del programa' });
+  }
+});
+
 app.get('/api/unidad/documentos', requireAuth, async (req, res) => {
   try {
     const jefeId = req.user.id;
@@ -259,6 +366,21 @@ app.post('/api/evaluaciones', requireAuth, async (req, res) => {
       'INSERT INTO evaluaciones (proyecto_id, evaluador_id, tipo, tabla_evaluacion, puntaje_total, condicion, observaciones) VALUES (?,?,?,?,?,?,?)',
       [proyecto_id, jefeId, tipo, tabla_evaluacion, puntaje_total, condicion, observaciones]
     );
+    const [docRow] = await conn.query(
+      'SELECT id FROM documentos_proyecto WHERE proyecto_id = ? AND tipo_documento = ? ORDER BY fecha_subida DESC LIMIT 1',
+      [proyecto_id, tipo]
+    );
+    if (Array.isArray(docRow) && docRow.length) {
+      const docId = docRow[0].id;
+      if (condicion === 'Aprobado') {
+        await conn.query('UPDATE documentos_proyecto SET estado = ? WHERE id = ?', ['Aprobado', docId]);
+      } else if (condicion === 'Desaprobado') {
+        await conn.query('UPDATE documentos_proyecto SET estado = ? WHERE id = ?', ['Rechazado', docId]);
+      }
+    }
+    if (tipo === 'Informe Final' && condicion === 'Aprobado') {
+      await conn.query("UPDATE proyectos SET estado = 'Finalizado Aprobado' WHERE id = ?", [proyecto_id]);
+    }
     conn.release();
     res.json({ success: true, evaluacion_id: result.insertId });
   } catch (err) {
@@ -283,6 +405,26 @@ app.get('/api/evaluaciones/by-proyecto/:proyecto_id', async (req, res) => {
     res.json({ success: true, evaluaciones: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Error al obtener evaluaciones' });
+  }
+});
+app.get('/api/evaluaciones/by-user/:usuario_id', async (req, res) => {
+  const usuario_id = Number(req.params.usuario_id);
+  if (!usuario_id) return res.status(400).json({ success: false, message: 'ID inválido' });
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      `SELECT e.*, p.titulo, p.id AS proyecto_id
+       FROM evaluaciones e
+       INNER JOIN proyectos p ON e.proyecto_id = p.id
+       INNER JOIN integrantes_proyecto ip ON p.id = ip.proyecto_id
+       WHERE ip.usuario_id = ?
+       ORDER BY e.fecha_evaluacion DESC`,
+      [usuario_id]
+    );
+    conn.release();
+    res.json({ success: true, evaluaciones: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener evaluaciones por usuario' });
   }
 });
 app.get('/api/articulos/:usuario_id', async (req, res) => {
