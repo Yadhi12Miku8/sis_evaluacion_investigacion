@@ -135,57 +135,30 @@ function updateCounters() {
   });
 }
 
-function loadUserProjects() {
-  const projects = [
-    {
-      id: 1,
-      title: "Desarrollo de Sistema IoT para Monitoreo Agrícola",
-      status: "active",
-      progress: 75,
-      line: "Tecnología e Innovación",
-      lastUpdate: "15/11/2024",
-      nextDeadline: "30/11/2024"
-    },
-    {
-      id: 2,
-      title: "Implementación de Plataforma E-learning Accesible",
-      status: "active",
-      progress: 60,
-      line: "Educación",
-      lastUpdate: "10/11/2024",
-      nextDeadline: "25/11/2024"
-    },
-    {
-      id: 3,
-      title: "Estudio de Impacto de Redes Sociales en Estudiantes",
-      status: "pending",
-      progress: 20,
-      line: "Ciencias Sociales",
-      lastUpdate: "05/11/2024",
-      nextDeadline: "20/11/2024"
-    },
-    {
-      id: 4,
-      title: "Aplicación Móvil para Gestión de Salud Mental",
-      status: "completed",
-      progress: 100,
-      line: "Salud y Bienestar",
-      lastUpdate: "30/10/2024",
-      nextDeadline: "Completado"
-    }
-  ];
-  
-  const container = document.getElementById('recentProjectsList');
-  if (!container) return;
-  
-  // Limpiar skeleton
-  container.innerHTML = '';
-  
-  // Agregar proyectos a la lista
-  projects.forEach(project => {
-    const projectItem = createProjectElement(project);
-    container.appendChild(projectItem);
-  });
+async function loadUserProjects() {
+  try {
+    const stored = localStorage.getItem('user_data') || '{}';
+    const user = JSON.parse(stored);
+    const container = document.querySelector('.projects-grid');
+    if (!container || !user || !user.usuario_id) return;
+    const resp = await fetch(`/api/proyectos/${user.usuario_id}`);
+    const data = await resp.json();
+    const projects = Array.isArray(data.proyectos) ? data.proyectos : [];
+    container.innerHTML = '';
+    projects.forEach(row => {
+      const mapped = {
+        id: row.id,
+        title: row.titulo,
+        status: mapProjectStatus(row.estado),
+        progress: 0,
+        line: row.tipo,
+        lastUpdate: row.fecha_inicio,
+        nextDeadline: row.fecha_fin
+      };
+      const el = createProjectElement(mapped);
+      container.appendChild(el);
+    });
+  } catch (e) {}
 }
 
 function createProjectElement(project) {
@@ -224,6 +197,14 @@ function getStatusText(status) {
   };
   
   return statusMap[status] || status;
+}
+function mapProjectStatus(estado) {
+  const s = String(estado || '').toLowerCase();
+  if (s.includes('ejec')) return 'active';
+  if (s.includes('pend')) return 'pending';
+  if (s.includes('compl') || s.includes('final')) return 'completed';
+  if (s.includes('eval')) return 'evaluated';
+  return 'active';
 }
 
 function loadPendingTasks() {
@@ -575,7 +556,8 @@ function setupEventListeners() {
       
       // Actualizar breadcrumb
       const pageName = this.querySelector('span').textContent;
-      document.getElementById('currentPage').textContent = pageName;
+      const cp = document.getElementById('currentPage');
+      if (cp) cp.textContent = pageName;
       
       // Cerrar sidebar en móviles
       if (window.innerWidth < 992) {
@@ -602,7 +584,8 @@ function setupEventListeners() {
   const modalCloseBtns = document.querySelectorAll('.modal-close, #cancelProjectBtn');
   modalCloseBtns.forEach(btn => {
     btn.addEventListener('click', function() {
-      document.getElementById('newProjectModal').classList.remove('active');
+      const m = document.getElementById('newProjectModal');
+      if (m) m.style.display = 'none';
     });
   });
   
@@ -636,12 +619,14 @@ function updateThemeIcon() {
 function updateLastUpdate() {
   const now = new Date();
   const timeString = now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  document.getElementById('lastAccess').textContent = timeString;
+  const el = document.getElementById('lastAccess');
+  if (el) el.textContent = timeString;
 }
 
 function showNewProjectModal() {
   const modal = document.getElementById('newProjectModal');
-  modal.classList.add('active');
+  if (!modal) return;
+  modal.style.display = 'block';
 }
 
 function saveNewProject() {
@@ -651,33 +636,39 @@ function saveNewProject() {
     return;
   }
   
-  const projectData = {
-    title: document.getElementById('projectTitle').value,
-    line: document.getElementById('projectLine').value,
-    duration: document.getElementById('projectDuration').value,
-    description: document.getElementById('projectDescription').value,
-    objectives: document.getElementById('projectObjectives').value,
-    confidential: document.getElementById('projectConfidential').checked,
-    createdAt: new Date().toISOString(),
-    status: 'pending'
+  const payload = {
+    titulo: document.getElementById('projectTitle').value,
+    tipo: document.getElementById('projectType').value || 'Investigacion Aplicada',
+    linea_investigacion_id: Number(document.getElementById('projectLineId').value) || null,
+    objetivo_general: document.getElementById('projectObjective').value || null,
+    beneficiarios: document.getElementById('projectBeneficiaries').value || null,
+    fecha_inicio: document.getElementById('projectStartDate').value || null,
+    fecha_fin: document.getElementById('projectEndDate').value || null
   };
-  
-  // Simular guardado
-  console.log('Proyecto guardado:', projectData);
-  
-  // Cerrar modal
-  document.getElementById('newProjectModal').classList.remove('active');
-  
-  // Mostrar confirmación
-  alert('Proyecto creado exitosamente. Será revisado por el comité correspondiente.');
-  
-  // Limpiar formulario
-  form.reset();
-  
-  // Actualizar contador de proyectos
-  const currentCount = parseInt(document.getElementById('myProjectsCount').textContent);
-  document.getElementById('myProjectsCount').textContent = currentCount + 1;
-  document.getElementById('pendingProjectsCount').textContent = parseInt(document.getElementById('pendingProjectsCount').textContent) + 1;
+  const token = localStorage.getItem('auth_token') || '';
+  fetch('/api/proyectos', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res && res.success) {
+      alert('Proyecto creado exitosamente');
+      form.reset();
+      const modal = document.getElementById('newProjectModal');
+      if (modal) modal.style.display = 'none';
+      loadUserProjects();
+    } else {
+      alert('Error al crear proyecto');
+    }
+  })
+  .catch(() => {
+    alert('Error al crear proyecto');
+  });
 }
 
 function showQuickAction(action) {

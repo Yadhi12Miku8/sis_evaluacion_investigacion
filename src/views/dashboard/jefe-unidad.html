@@ -3,55 +3,693 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Jefe de Unidad</title>
+  <title>Dashboard Jefe de Unidad - IESTP AACD</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/dashboards/jefe-unidad.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="layout">
+    <!-- Sidebar Jefe de Unidad -->
     <aside class="sidebar">
-      <div class="user-info">
-        <div id="userName">Jefe de Unidad</div>
-        <small id="userRole">Jefe de Unidad de Investigación</small>
+      <div class="sidebar-header">
+        <div class="user-profile">
+          <div class="user-avatar jefe">
+            <i class="fas fa-user-tie"></i>
+          </div>
+          <div class="user-info">
+            <h3 id="userName">Jefe de Unidad</h3>
+            <p class="user-subtitle">Unidad de Investigación</p>
+            <p class="user-role"><i class="fas fa-user-tag"></i> Jefe de Unidad de Investigación</p>
+            <p class="user-time"><i class="fas fa-clock"></i> Último acceso: <span id="lastAccessTime">--:--</span> hrs</p>
+          </div>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+          <i class="fas fa-bars"></i>
+        </button>
       </div>
+
       <nav class="menu">
-        <a class="menu-item" href="#proyectos">Visualizar proyectos</a>
-        <a class="menu-item" href="#evaluar-perfiles">Evaluar perfiles de proyectos</a>
-        <a class="menu-item" href="#evaluar-informes">Evaluar informes finales</a>
-        <a class="menu-item" href="#visto-bueno-articulos">Visto Bueno artículos científicos</a>
-        <a class="menu-item" href="#solicitar-rd">Solicitar emisión de RD</a>
-        <a class="menu-item" href="#monitoreo">Monitorear avances</a>
-        <a class="menu-item" href="#observaciones">Agregar observaciones</a>
-        <a class="menu-item" href="#exposicion">Gestionar exposición anual</a>
-        <a class="menu-item" href="#reportes">Reportes estadísticos</a>
-        <a class="menu-item" href="#notificaciones">Notificaciones a docentes</a>
+        <div class="menu-section">
+          <a class="menu-item active" href="#inicio">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Visión General</span>
+          </a>
+          <a class="menu-item" href="#visualizar-proyectos">
+            <i class="fas fa-project-diagram"></i>
+            <span>Visualizar Proyectos</span>
+            <span class="badge" id="totalProjectsBadge">0</span>
+          </a>
+          <a class="menu-item" href="#evaluar-perfiles">
+            <i class="fas fa-file-alt"></i>
+            <span>Evaluar Perfiles</span>
+            <span class="badge badge-warning" id="pendingProfilesBadge">0</span>
+          </a>
+          <a class="menu-item" href="#evaluar-informes">
+            <i class="fas fa-file-contract"></i>
+            <span>Evaluar Informes Finales</span>
+            <span class="badge badge-danger" id="pendingReportsBadge">0</span>
+          </a>
+          <a class="menu-item" href="#visto-bueno-articulos">
+            <i class="fas fa-newspaper"></i>
+            <span>Visto Bueno Artículos</span>
+            <span class="badge badge-info" id="pendingArticlesBadge">0</span>
+          </a>
+        </div>
+
+        <div class="menu-section">
+          <h4 class="section-title">GESTIÓN DOCUMENTAL</h4>
+          <a class="menu-item" href="#solicitar-rd">
+            <i class="fas fa-file-signature"></i>
+            <span>Solicitar Emisión de RD</span>
+            <span class="badge" id="pendingRDRequests">0</span>
+          </a>
+          <a class="menu-item" href="#monitoreo-avances">
+            <i class="fas fa-chart-line"></i>
+            <span>Monitorear Avances</span>
+          </a>
+          <a class="menu-item" href="#agregar-observaciones">
+            <i class="fas fa-comment-alt"></i>
+            <span>Agregar Observaciones</span>
+            <span class="badge" id="pendingObservations">0</span>
+          </a>
+          <a class="menu-item" href="#aprobar-avances">
+            <i class="fas fa-check-circle"></i>
+            <span>Aprobar Avances</span>
+          </a>
+          <a class="menu-item" href="#revision-documental">
+            <i class="fas fa-file-check"></i>
+            <span>Revisión Documental</span>
+          </a>
+        </div>
+
+        <div class="menu-section">
+          <h4 class="section-title">GESTIÓN DE EVENTOS</h4>
+          <a class="menu-item" href="#gestionar-exposicion">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Gestionar Exposición Anual</span>
+            <span class="badge badge-success">Activo</span>
+          </a>
+          <a class="menu-item" href="#calendario-evaluaciones">
+            <i class="fas fa-calendar-check"></i>
+            <span>Calendario de Evaluaciones</span>
+          </a>
+          <a class="menu-item" href="#eventos-investigacion">
+            <i class="fas fa-microphone-alt"></i>
+            <span>Eventos de Investigación</span>
+          </a>
+          <a class="menu-item" href="#comites-evaluacion">
+            <i class="fas fa-users"></i>
+            <span>Comités de Evaluación</span>
+          </a>
+        </div>
+
+        <div class="menu-section">
+          <h4 class="section-title">REPORTES Y ANÁLISIS</h4>
+          <a class="menu-item" href="#reportes-estadisticos">
+            <i class="fas fa-chart-bar"></i>
+            <span>Reportes Estadísticos</span>
+          </a>
+          <a class="menu-item" href="#metricas-investigacion">
+            <i class="fas fa-chart-pie"></i>
+            <span>Métricas de Investigación</span>
+          </a>
+          <a class="menu-item" href="#indicadores-desempeno">
+            <i class="fas fa-chart-line"></i>
+            <span>Indicadores de Desempeño</span>
+          </a>
+          <a class="menu-item" href="#reportes-anuales">
+            <i class="fas fa-file-export"></i>
+            <span>Reportes Anuales</span>
+          </a>
+        </div>
+
+        <div class="menu-section">
+          <h4 class="section-title">COMUNICACIÓN</h4>
+          <a class="menu-item" href="#notificaciones-docentes">
+            <i class="fas fa-bell"></i>
+            <span>Notificaciones a Docentes</span>
+            <span class="badge badge-warning" id="pendingNotifications">0</span>
+          </a>
+          <a class="menu-item" href="#comunicados-oficiales">
+            <i class="fas fa-bullhorn"></i>
+            <span>Comunicados Oficiales</span>
+          </a>
+          <a class="menu-item" href="#mensajes-docentes">
+            <i class="fas fa-envelope"></i>
+            <span>Mensajes a Docentes</span>
+          </a>
+          <a class="menu-item" href="#recordatorios">
+            <i class="fas fa-clock"></i>
+            <span>Recordatorios</span>
+          </a>
+        </div>
+
+        <div class="menu-section">
+          <h4 class="section-title">ACCESO RESTRINGIDO</h4>
+          <a class="menu-item disabled" href="#registrar-proyectos" title="Acceso restringido según permisos">
+            <i class="fas fa-plus-circle"></i>
+            <span>Registrar Nuevos Proyectos</span>
+            <i class="fas fa-lock restriction-icon"></i>
+          </a>
+          <a class="menu-item disabled" href="#emitir-rd" title="No emite resoluciones directamente">
+            <i class="fas fa-file-signature"></i>
+            <span>Emitir Resoluciones</span>
+            <i class="fas fa-lock restriction-icon"></i>
+          </a>
+        </div>
+
+        <div class="menu-section">
+          <h4 class="section-title">AYUDA Y SOPORTE</h4>
+          <a class="menu-item" href="#normativas">
+            <i class="fas fa-book"></i>
+            <span>Normativas</span>
+          </a>
+          <a class="menu-item" href="#documentacion">
+            <i class="fas fa-file-alt"></i>
+            <span>Documentación</span>
+          </a>
+          <a class="menu-item" href="#soporte">
+            <i class="fas fa-headset"></i>
+            <span>Soporte Técnico</span>
+          </a>
+        </div>
+
+        <div class="menu-footer">
+          <button class="btn-logout" id="logoutBtn">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
       </nav>
     </aside>
-    <div class="content">
-      <header>
-        <div class="header-content">
-          <h1>🧭 Dashboard Jefe de Unidad</h1>
+
+    <!-- Contenido Principal Jefe de Unidad -->
+    <div class="main-content">
+      <!-- Header Jefe de Unidad -->
+      <header class="main-header">
+        <div class="header-left">
+          <div class="institution-header">
+            <div class="institution-logo jefe">
+              <i class="fas fa-user-tie"></i>
+            </div>
+            <div>
+              <h1>Panel de Jefe de Unidad de Investigación</h1>
+              <p class="institution-subtitle">I.E.S.T.P "Andrés Avelino Cáceres Dorregaray"</p>
+              <p class="system-name">Unidad de Investigación - Supervisión y Aprobación</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="header-right">
+          <div class="header-actions">
+            <button class="btn-notifications" id="notificationsBtn">
+              <i class="fas fa-bell"></i>
+              <span class="notification-badge" id="notificationCount">0</span>
+            </button>
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input type="text" placeholder="Buscar proyectos, docentes...">
+            </div>
+            <button class="btn-action" id="quickEvaluationBtn">
+              <i class="fas fa-clipboard-check"></i>
+              <span>Evaluación Rápida</span>
+            </button>
+          </div>
         </div>
       </header>
-      <main>
-        <section class="welcome-card">
-          <h2>Bienvenido</h2>
-          <p>Supervisión y aprobación de proyectos de investigación.</p>
+
+      <!-- Contenido Principal -->
+      <main class="content">
+        <!-- Banner de Bienvenida -->
+        <section class="welcome-banner jefe">
+          <div class="welcome-content">
+            <h2>Supervisión y Aprobación de Investigación</h2>
+            <p>Gestiona la evaluación de proyectos, informes y artículos científicos de los investigadores.</p>
+          </div>
+          <div class="welcome-stats">
+            <div class="stat-item critical">
+              <div class="stat-value" id="pendingEvaluations">0</div>
+              <div class="stat-label">Evaluaciones Pendientes</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="activeProjects">0</div>
+              <div class="stat-label">Proyectos Activos</div>
+            </div>
+            <div class="stat-item warning">
+              <div class="stat-value" id="projectsDelayed">0</div>
+              <div class="stat-label">Proyectos Atrasados</div>
+            </div>
+            <div class="stat-item success">
+              <div class="stat-value" id="projectsCompleted">0</div>
+              <div class="stat-label">Proyectos Completados</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sección de Evaluaciones Pendientes -->
+        <section class="jefe-section">
+          <div class="section-header">
+            <h2><i class="fas fa-tasks"></i> Evaluaciones Pendientes</h2>
+            <div class="section-actions">
+              <button class="btn-primary" id="bulkApproveBtn">
+                <i class="fas fa-check-double"></i>
+                Aprobar Múltiples
+              </button>
+              <button class="btn-secondary">
+                <i class="fas fa-filter"></i>
+                Filtrar
+              </button>
+            </div>
+          </div>
+
+          <div class="evaluation-tabs">
+            <div class="tabs-header">
+              <button class="tab-btn active" data-tab="profiles">Perfiles de Proyectos</button>
+              <button class="tab-btn" data-tab="reports">Informes Finales</button>
+              <button class="tab-btn" data-tab="articles">Artículos Científicos</button>
+              <button class="tab-btn" data-tab="observations">Observaciones</button>
+            </div>
+            
+            <div class="tabs-content">
+              <!-- Perfiles de Proyectos -->
+              <div class="tab-pane active" id="profiles-pane">
+                <div class="evaluation-list" id="profilesList">
+                  <!-- Perfiles se cargarán dinámicamente -->
+                  <div class="evaluation-item">
+                    <div class="evaluation-header">
+                      <h3>Desarrollo de Sistema IoT para Monitoreo Agrícola</h3>
+                      <span class="evaluation-status pending">Pendiente</span>
+                    </div>
+                    <div class="evaluation-details">
+                      <div class="detail-item">
+                        <i class="fas fa-user"></i>
+                        <span>Investigador: Lourdes Lidia</span>
+                      </div>
+                      <div class="detail-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>Fecha entrega: 15/11/2024</span>
+                      </div>
+                      <div class="detail-item">
+                        <i class="fas fa-clock"></i>
+                        <span>Días restantes: 3</span>
+                      </div>
+                    </div>
+                    <div class="evaluation-actions">
+                      <button class="btn-action approve">
+                        <i class="fas fa-check"></i>
+                        Aprobar
+                      </button>
+                      <button class="btn-action reject">
+                        <i class="fas fa-times"></i>
+                        Rechazar
+                      </button>
+                      <button class="btn-action view">
+                        <i class="fas fa-eye"></i>
+                        Ver Detalles
+                      </button>
+                      <button class="btn-action comment">
+                        <i class="fas fa-comment"></i>
+                        Observar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Informes Finales -->
+              <div class="tab-pane" id="reports-pane">
+                <div class="evaluation-list" id="reportsList">
+                  <!-- Informes se cargarán dinámicamente -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sección de Proyectos Activos -->
+        <section class="jefe-section">
+          <div class="section-header">
+            <h2><i class="fas fa-project-diagram"></i> Proyectos Activos en Supervisión</h2>
+            <div class="section-actions">
+              <button class="btn-primary" id="exportProjectsBtn">
+                <i class="fas fa-file-export"></i>
+                Exportar
+              </button>
+              <button class="btn-secondary" id="filterProjectsBtn">
+                <i class="fas fa-filter"></i>
+                Filtrar
+              </button>
+            </div>
+          </div>
+
+          <div class="projects-overview">
+            <div class="projects-filters">
+              <div class="filter-group">
+                <label for="filterStatus">Estado:</label>
+                <select id="filterStatus" class="filter-select">
+                  <option value="all">Todos</option>
+                  <option value="active">En ejecución</option>
+                  <option value="delayed">Atrasados</option>
+                  <option value="ending">Por finalizar</option>
+                  <option value="completed">Completados</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="filterLine">Línea de investigación:</label>
+                <select id="filterLine" class="filter-select">
+                  <option value="all">Todas</option>
+                  <option value="tecnologia">Tecnología</option>
+                  <option value="educacion">Educación</option>
+                  <option value="social">Ciencias Sociales</option>
+                  <option value="salud">Salud</option>
+                </select>
+              </div>
+              <button class="btn-filter" id="applyProjectFilters">
+                <i class="fas fa-check"></i>
+                Aplicar
+              </button>
+            </div>
+
+            <div class="projects-table-container">
+              <table class="projects-table">
+                <thead>
+                  <tr>
+                    <th>Proyecto</th>
+                    <th>Investigador</th>
+                    <th>Línea</th>
+                    <th>Avance</th>
+                    <th>Estado</th>
+                    <th>Último Avance</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="projectsTableBody">
+                  <!-- Proyectos se cargarán dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sección de Solicitudes de RD -->
+        <section class="jefe-section">
+          <div class="section-header">
+            <h2><i class="fas fa-file-signature"></i> Solicitudes de Resolución Directorial</h2>
+            <button class="btn-primary" id="newRDRequestBtn">
+              <i class="fas fa-plus"></i>
+              Nueva Solicitud
+            </button>
+          </div>
+
+          <div class="rd-requests">
+            <div class="rd-card pending">
+              <div class="rd-header">
+                <h3>RD-2024-001</h3>
+                <span class="rd-status pending">Pendiente</span>
+              </div>
+              <div class="rd-details">
+                <p><strong>Proyecto:</strong> Implementación de Plataforma E-learning</p>
+                <p><strong>Investigador:</strong> Carlos Rodríguez</p>
+                <p><strong>Tipo:</strong> Aprobación de presupuesto</p>
+                <p><strong>Fecha solicitud:</strong> 10/11/2024</p>
+              </div>
+              <div class="rd-actions">
+                <button class="btn-action">
+                  <i class="fas fa-eye"></i>
+                  Revisar
+                </button>
+                <button class="btn-action">
+                  <i class="fas fa-paper-plane"></i>
+                  Enviar
+                </button>
+              </div>
+            </div>
+            
+            <div class="rd-card approved">
+              <div class="rd-header">
+                <h3>RD-2024-002</h3>
+                <span class="rd-status approved">Aprobada</span>
+              </div>
+              <div class="rd-details">
+                <p><strong>Proyecto:</strong> Estudio Impacto Redes Sociales</p>
+                <p><strong>Investigador:</strong> Ana Martínez</p>
+                <p><strong>Tipo:</strong> Designación de comité</p>
+                <p><strong>Fecha aprobación:</strong> 05/11/2024</p>
+              </div>
+              <div class="rd-actions">
+                <button class="btn-action">
+                  <i class="fas fa-download"></i>
+                  Descargar
+                </button>
+                <button class="btn-action">
+                  <i class="fas fa-share"></i>
+                  Compartir
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sección de Exposición Anual -->
+        <section class="jefe-section">
+          <div class="section-header">
+            <h2><i class="fas fa-calendar-alt"></i> Exposición Anual de Investigación</h2>
+            <div class="section-actions">
+              <button class="btn-primary" id="manageExpoBtn">
+                <i class="fas fa-edit"></i>
+                Gestionar
+              </button>
+              <button class="btn-secondary" id="expoCalendarBtn">
+                <i class="fas fa-calendar"></i>
+                Calendario
+              </button>
+            </div>
+          </div>
+
+          <div class="expo-dashboard">
+            <div class="expo-stats">
+              <div class="expo-stat">
+                <div class="stat-icon">
+                  <i class="fas fa-user-check"></i>
+                </div>
+                <div class="stat-content">
+                  <div class="stat-value" id="expoRegistered">0</div>
+                  <div class="stat-label">Proyectos Inscritos</div>
+                </div>
+              </div>
+              
+              <div class="expo-stat">
+                <div class="stat-icon">
+                  <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                  <div class="stat-value" id="expoPending">0</div>
+                  <div class="stat-label>Pendientes de Revisión</div>
+                </div>
+              </div>
+              
+              <div class="expo-stat">
+                <div class="stat-icon">
+                  <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                  <div class="stat-value" id="expoApproved">0</div>
+                  <div class="stat-label>Aprobados</div>
+                </div>
+              </div>
+              
+              <div class="expo-stat">
+                <div class="stat-icon">
+                  <i class="fas fa-calendar-day"></i>
+                </div>
+                <div class="stat-content">
+                  <div class="stat-value" id="expoDaysLeft">0</div>
+                  <div class="stat-label>Días Restantes</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="expo-projects">
+              <h3>Proyectos Recientemente Inscritos</h3>
+              <div class="expo-list" id="expoProjectsList">
+                <!-- Proyectos de exposición se cargarán dinámicamente -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sección de Reportes Estadísticos -->
+        <section class="jefe-section">
+          <div class="section-header">
+            <h2><i class="fas fa-chart-bar"></i> Reportes Estadísticos</h2>
+            <div class="section-actions">
+              <select id="reportPeriod" class="period-select">
+                <option value="month">Este mes</option>
+                <option value="quarter">Este trimestre</option>
+                <option value="year">Este año</option>
+                <option value="custom">Personalizado</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="reports-dashboard">
+            <div class="report-card">
+              <div class="report-header">
+                <i class="fas fa-project-diagram"></i>
+                <h3>Proyectos por Estado</h3>
+              </div>
+              <div class="report-chart" id="projectsByStatusChart">
+                <!-- Gráfico se generará dinámicamente -->
+                <div class="chart-placeholder">
+                  <i class="fas fa-chart-pie"></i>
+                  <p>Gráfico de proyectos por estado</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="report-card">
+              <div class="report-header">
+                <i class="fas fa-users"></i>
+                <h3>Productividad por Investigador</h3>
+              </div>
+              <div class="report-chart" id="researcherProductivityChart">
+                <div class="chart-placeholder">
+                  <i class="fas fa-chart-bar"></i>
+                  <p>Gráfico de productividad</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="report-card">
+              <div class="report-header">
+                <i class="fas fa-flask"></i>
+                <h3>Proyectos por Línea</h3>
+              </div>
+              <div class="report-chart" id="projectsByLineChart">
+                <div class="chart-placeholder">
+                  <i class="fas fa-chart-line"></i>
+                  <p>Gráfico por línea de investigación</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="report-card">
+              <div class="report-header">
+                <i class="fas fa-calendar-alt"></i>
+                <h3>Evaluaciones por Mes</h3>
+              </div>
+              <div class="report-chart" id="evaluationsByMonthChart">
+                <div class="chart-placeholder">
+                  <i class="fas fa-chart-area"></i>
+                  <p>Gráfico de evaluaciones</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sección de Notificaciones a Docentes -->
+        <section class="jefe-section">
+          <div class="section-header">
+            <h2><i class="fas fa-bell"></i> Notificaciones a Docentes</h2>
+            <button class="btn-primary" id="newNotificationBtn">
+              <i class="fas fa-plus"></i>
+              Nueva Notificación
+            </button>
+          </div>
+
+          <div class="notifications-manager">
+            <div class="notifications-composer">
+              <h3>Enviar Notificación Masiva</h3>
+              <div class="composer-form">
+                <div class="form-group">
+                  <label for="notificationType">Tipo de Notificación:</label>
+                  <select id="notificationType" class="form-select">
+                    <option value="reminder">Recordatorio</option>
+                    <option value="deadline">Fecha límite</option>
+                    <option value="approval">Aprobación</option>
+                    <option value="observation">Observación</option>
+                    <option value="event">Evento</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="notificationRecipients">Destinatarios:</label>
+                  <select id="notificationRecipients" class="form-select" multiple>
+                    <option value="all">Todos los investigadores</option>
+                    <option value="active">Investigadores con proyectos activos</option>
+                    <option value="pending">Investigadores con pendientes</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="notificationMessage">Mensaje:</label>
+                  <textarea id="notificationMessage" rows="4" placeholder="Escriba el mensaje de notificación..."></textarea>
+                </div>
+                <button class="btn-primary" id="sendNotificationBtn">
+                  <i class="fas fa-paper-plane"></i>
+                  Enviar Notificación
+                </button>
+              </div>
+            </div>
+
+            <div class="notifications-history">
+              <h3>Historial de Notificaciones</h3>
+              <div class="history-list" id="notificationsHistory">
+                <!-- Historial se cargará dinámicamente -->
+              </div>
+            </div>
+          </div>
         </section>
       </main>
+
+      <!-- Footer -->
+      <footer class="main-footer">
+        <div class="footer-content">
+          <div class="footer-left">
+            <p>I.E.S.T.P "Andrés Avelino Cáceres Dorregaray"</p>
+            <p class="footer-sub">© 2024 Unidad de Investigación - Panel de Jefe de Unidad</p>
+          </div>
+          <div class="footer-right">
+            <div class="system-metrics">
+              <span class="metric">
+                <i class="fas fa-project-diagram"></i>
+                <span id="totalSupervisedProjects">0</span> proyectos supervisados
+              </span>
+              <span class="metric">
+                <i class="fas fa-users"></i>
+                <span id="totalResearchers">0</span> investigadores
+              </span>
+              <span class="metric">
+                <i class="fas fa-check-circle"></i>
+                <span id="approvalRate">0%</span> tasa de aprobación
+              </span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   </div>
-  <script>
-    (function(){
-      try {
-        const user = JSON.parse(localStorage.getItem('user_data')||'{}');
-        if (user && user.nombres) {
-          document.getElementById('userName').textContent = `${user.nombres} ${user.apellidos||''}`.trim();
-        }
-        if (user && user.rol) {
-          document.getElementById('userRole').textContent = user.rol;
-        }
-      } catch(e){}
-    })();
-  </script>
+
+  <!-- Modal para Evaluación -->
+  <div class="modal" id="evaluationModal">
+    <div class="modal-content large">
+      <div class="modal-header">
+        <h3><i class="fas fa-clipboard-check"></i> Evaluación de Proyecto</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Contenido del modal se cargará dinámicamente -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelEvaluationBtn">Cancelar</button>
+        <button class="btn-primary" id="submitEvaluationBtn">Guardar Evaluación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/dashboards/jefe-unidad.js"></script>
 </body>
 </html>

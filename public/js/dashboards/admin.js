@@ -363,21 +363,8 @@ function applyHashNavigation() {
     item.classList.toggle('active', isActive);
   });
 
-  if (hash === 'inicio') {
-    sections.forEach(sec => {
-      sec.style.display = '';
-    });
-    return;
-  }
-
-  const target = document.getElementById(hash);
-  if (!target) {
-    sections.forEach(sec => {
-      sec.style.display = '';
-    });
-    return;
-  }
-
+  const target = document.getElementById(hash) || document.getElementById('inicio');
+  if (!target) return;
   sections.forEach(sec => {
     sec.style.display = sec === target ? '' : 'none';
   });

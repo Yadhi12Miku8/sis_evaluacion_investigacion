@@ -171,6 +171,120 @@ app.get('/api/documentos_proyecto/by-user/:usuario_id', async (req, res) => {
   }
 });
 
+app.get('/api/unidad/proyectos', requireAuth, async (req, res) => {
+  try {
+    const jefeId = req.user.id;
+    const conn = await pool.getConnection();
+    const [jefeRows] = await conn.query('SELECT programa_estudio_id, rol FROM usuarios WHERE id = ? LIMIT 1', [jefeId]);
+    if (!jefeRows || jefeRows.length === 0) {
+      conn.release();
+      return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
+    }
+    const jefe = jefeRows[0];
+    if (!String(jefe.rol || '').toLowerCase().includes('jefe')) {
+      conn.release();
+      return res.status(403).json({ success: false, message: 'Permisos insuficientes' });
+    }
+    const [rows] = await conn.query(
+      `SELECT p.*, u.nombres, u.apellidos, u.programa_estudio_id
+       FROM proyectos p
+       INNER JOIN usuarios u ON u.id = p.usuario_id
+       WHERE u.programa_estudio_id = ?
+       ORDER BY p.fecha_registro DESC`,
+      [jefe.programa_estudio_id]
+    );
+    conn.release();
+    res.json({ success: true, proyectos: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener proyectos de unidad' });
+  }
+});
+
+app.get('/api/unidad/documentos', requireAuth, async (req, res) => {
+  try {
+    const jefeId = req.user.id;
+    const conn = await pool.getConnection();
+    const [jefeRows] = await conn.query('SELECT programa_estudio_id, rol FROM usuarios WHERE id = ? LIMIT 1', [jefeId]);
+    if (!jefeRows || jefeRows.length === 0) {
+      conn.release();
+      return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
+    }
+    const jefe = jefeRows[0];
+    if (!String(jefe.rol || '').toLowerCase().includes('jefe')) {
+      conn.release();
+      return res.status(403).json({ success: false, message: 'Permisos insuficientes' });
+    }
+    const [rows] = await conn.query(
+      `SELECT d.*, p.titulo, u.nombres, u.apellidos
+       FROM documentos_proyecto d
+       INNER JOIN proyectos p ON d.proyecto_id = p.id
+       INNER JOIN usuarios u ON p.usuario_id = u.id
+       WHERE u.programa_estudio_id = ?
+       ORDER BY d.fecha_subida DESC`,
+      [jefe.programa_estudio_id]
+    );
+    conn.release();
+    res.json({ success: true, documentos: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener documentos de unidad' });
+  }
+});
+
+app.post('/api/evaluaciones', requireAuth, async (req, res) => {
+  const { proyecto_id, tipo = 'Perfil', tabla_evaluacion = null, puntaje_total = null, condicion = null, observaciones = null } = req.body || {};
+  try {
+    const jefeId = req.user.id;
+    const conn = await pool.getConnection();
+    const [jefeRows] = await conn.query('SELECT programa_estudio_id, rol FROM usuarios WHERE id = ? LIMIT 1', [jefeId]);
+    if (!jefeRows || jefeRows.length === 0) {
+      conn.release();
+      return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
+    }
+    const jefe = jefeRows[0];
+    if (!(String(jefe.rol || '').toLowerCase().includes('jefe') || String(jefe.rol || '').toLowerCase().includes('admin'))) {
+      conn.release();
+      return res.status(403).json({ success: false, message: 'Permisos insuficientes' });
+    }
+    const [projRows] = await conn.query('SELECT u.programa_estudio_id FROM proyectos p INNER JOIN usuarios u ON p.usuario_id = u.id WHERE p.id = ? LIMIT 1', [proyecto_id]);
+    if (!projRows || projRows.length === 0) {
+      conn.release();
+      return res.status(404).json({ success: false, message: 'Proyecto no encontrado' });
+    }
+    const belongs = projRows[0].programa_estudio_id === jefe.programa_estudio_id || String(jefe.rol || '').toLowerCase().includes('admin');
+    if (!belongs) {
+      conn.release();
+      return res.status(403).json({ success: false, message: 'Proyecto no pertenece a tu unidad' });
+    }
+    const [result] = await conn.query(
+      'INSERT INTO evaluaciones (proyecto_id, evaluador_id, tipo, tabla_evaluacion, puntaje_total, condicion, observaciones) VALUES (?,?,?,?,?,?,?)',
+      [proyecto_id, jefeId, tipo, tabla_evaluacion, puntaje_total, condicion, observaciones]
+    );
+    conn.release();
+    res.json({ success: true, evaluacion_id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al registrar evaluación' });
+  }
+});
+
+app.get('/api/evaluaciones/by-proyecto/:proyecto_id', async (req, res) => {
+  const proyecto_id = Number(req.params.proyecto_id);
+  if (!proyecto_id) return res.status(400).json({ success: false, message: 'ID inválido' });
+  try {
+    const conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      `SELECT e.*, u.nombres AS evaluador_nombres, u.apellidos AS evaluador_apellidos
+       FROM evaluaciones e
+       LEFT JOIN usuarios u ON u.id = e.evaluador_id
+       WHERE e.proyecto_id = ?
+       ORDER BY e.fecha_evaluacion DESC`,
+      [proyecto_id]
+    );
+    conn.release();
+    res.json({ success: true, evaluaciones: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error al obtener evaluaciones' });
+  }
+});
 app.get('/api/articulos/:usuario_id', async (req, res) => {
   const { usuario_id } = req.params;
   try {

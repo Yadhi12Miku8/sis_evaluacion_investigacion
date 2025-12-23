@@ -486,5 +486,95 @@
 
   <!-- Scripts -->
   <script src="/js/dashboards/admin.js?v=20251223_2"></script>
+  <div class="modal" id="catalogModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="catalogModalTitle"></h3>
+        <button class="modal-close" id="catalogModalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="catalogModalBody"></div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="closeCatalogBtn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="approveModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-check-double"></i> Aprobar solicitudes</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="selectedUsersList"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelApproveBtn">Cancelar</button>
+        <button class="btn-primary" id="confirmApproveBtn">Confirmar</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="userModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="userModalTitle"></h3>
+        <button class="modal-close" id="userModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="userForm">
+          <input type="hidden" id="userId">
+          <div class="form-row">
+            <div class="form-group">
+              <label>DNI</label>
+              <input type="text" id="userDni" required>
+            </div>
+            <div class="form-group">
+              <label>Nombres</label>
+              <input type="text" id="userNombres" required>
+            </div>
+            <div class="form-group">
+              <label>Apellidos</label>
+              <input type="text" id="userApellidos" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Correo</label>
+              <input type="email" id="userEmail" required>
+            </div>
+            <div class="form-group">
+              <label>Teléfono</label>
+              <input type="text" id="userTelefono">
+            </div>
+            <div class="form-group">
+              <label>Rol</label>
+              <select id="userRol">
+                <option>Administrador</option>
+                <option>Docente Investigador</option>
+                <option>Comite Editor</option>
+                <option>Director General</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Estado</label>
+              <select id="userEstado">
+                <option>Activo</option>
+                <option>Inactivo</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Contraseña</label>
+              <input type="password" id="userPassword">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancelUserBtn">Cancelar</button>
+        <button class="btn-primary" id="saveUserBtn">Guardar</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

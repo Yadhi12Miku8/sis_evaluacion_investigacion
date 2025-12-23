@@ -195,7 +195,7 @@
           <div class="section-header">
             <h2><i class="fas fa-project-diagram"></i> Mis Proyectos Activos</h2>
             <div class="section-actions">
-              <button class="btn-primary">
+              <button class="btn-primary" id="newProjectBtn">
                 <i class="fas fa-plus"></i>
                 Nuevo Proyecto
               </button>
@@ -453,6 +453,50 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/dashboards/docente.js"></script>
+  <script src="/js/dashboards/doncente.js"></script>
+  <div id="newProjectModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h3>Nuevo Proyecto</h3>
+      <form id="newProjectForm">
+        <div class="form-row">
+          <label for="projectTitle">Título</label>
+          <input type="text" id="projectTitle" required>
+        </div>
+        <div class="form-row">
+          <label for="projectType">Tipo</label>
+          <select id="projectType">
+            <option value="Investigacion Aplicada">Investigación Aplicada</option>
+            <option value="Innovacion Pedagogica">Innovación Pedagógica</option>
+            <option value="Otra">Otra</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="projectLineId">Línea de Investigación (ID)</label>
+          <input type="number" id="projectLineId" min="1" step="1">
+        </div>
+        <div class="form-row">
+          <label for="projectObjective">Objetivo General</label>
+          <textarea id="projectObjective" required></textarea>
+        </div>
+        <div class="form-row">
+          <label for="projectBeneficiaries">Beneficiarios</label>
+          <input type="text" id="projectBeneficiaries">
+        </div>
+        <div class="form-row">
+          <label for="projectStartDate">Fecha Inicio</label>
+          <input type="date" id="projectStartDate">
+        </div>
+        <div class="form-row">
+          <label for="projectEndDate">Fecha Fin</label>
+          <input type="date" id="projectEndDate">
+        </div>
+      </form>
+      <div class="modal-actions">
+        <button id="saveProjectBtn" class="btn-primary">Guardar</button>
+        <button id="cancelProjectBtn" class="btn-secondary">Cancelar</button>
+      </div>
+      <button class="modal-close">×</button>
+    </div>
+  </div>
 </body>
 </html>
